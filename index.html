@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Comida">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A221D" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<script src="config.js"></script>
+<title>Plan Nacho y Teresa</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: market-board planner — sticky header (tabs + person switch), "Hoy" as home, 7-day colour grid, detail in a sliding sheet, full-screen cooking mode */
+:root{
+  --bg:#F3F5EF; --surface:#FFFFFF; --sunk:#E9EDE4; --ink:#17221B; --muted:#5B685F; --line:#D8DFD3;
+  --accent:#0A7448; --accent-ink:#FFFFFF;
+  --des:#E3940A; --alm:#D5462A; --mer:#5C8A1C; --cen:#2C5BA6; --pos:#8B4A2B;
+  --nacho:#0E7A84; --teresa:#C03C66;
+  --ok:#1F8A4C; --warn:#C27C0E; --bad:#C2382B;
+  --tint:14%;
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",sans-serif;
+  --f-body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111713; --surface:#1A221D; --sunk:#222C26; --ink:#E8EEE8; --muted:#9AA79E; --line:#2F3B34;
+  --accent:#37B57A; --accent-ink:#0B1A12;
+  --des:#F0AE3C; --alm:#EE6D52; --mer:#8DBA4A; --cen:#6E98DE; --pos:#C98A65;
+  --nacho:#3FB7C1; --teresa:#EE7398; --ok:#4CC27F; --warn:#E9A93B; --bad:#EE6D5F; --tint:20%; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111713; --surface:#1A221D; --sunk:#222C26; --ink:#E8EEE8; --muted:#9AA79E; --line:#2F3B34;
+  --accent:#37B57A; --accent-ink:#0B1A12;
+  --des:#F0AE3C; --alm:#EE6D52; --mer:#8DBA4A; --cen:#6E98DE; --pos:#C98A65;
+  --nacho:#3FB7C1; --teresa:#EE7398; --ok:#4CC27F; --warn:#E9A93B; --bad:#EE6D5F; --tint:20%; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.brand h1{font-size:1.4rem;font-weight:800}
+.brand h1 .amp{color:var(--accent)}
+.sync{font-size:.75rem;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.ok i{background:var(--ok)} .sync.err i{background:var(--bad)}
+nav.tabs{display:flex;gap:2px;background:var(--sunk);padding:4px;border-radius:999px;overflow-x:auto;max-width:100%}
+nav.tabs a{text-decoration:none;color:var(--muted);padding:7px 13px;border-radius:999px;font-weight:600;font-size:.88rem;white-space:nowrap}
+nav.tabs a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface);flex:none}
+.seg button{border:0;background:none;padding:7px 12px;font-size:.84rem;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button[data-who="N"][aria-pressed="true"]{background:var(--nacho);color:#fff}
+.seg button[data-who="T"][aria-pressed="true"]{background:var(--teresa);color:#fff}
+@media (max-width:640px){.top .wrap{gap:8px}.brand h1{font-size:1.2rem}nav.tabs{order:3;width:100%}nav.tabs a{flex:1;text-align:center;padding:7px 8px}}
+
+main{padding-block:18px 64px}
+section.view{display:flex;flex-direction:column;gap:16px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.bar h2{font-size:1.3rem}
+.spacer{flex:1}
+.iconbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none}
+.pill,.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:.85rem;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+.note{color:var(--muted);font-size:.84rem;max-width:80ch;margin:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0}
+.panel h3{font-size:1.05rem;margin-bottom:10px}
+.panel ol,.panel ul{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:75ch}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;width:max-content}
+.tag.train{background:var(--ink);color:var(--bg)} .tag.rest{background:var(--sunk);color:var(--muted)} .tag.opt{border:1px dashed var(--muted);color:var(--muted)}
+.tag.rot{background:color-mix(in srgb,var(--accent) 16%,var(--surface));color:var(--accent)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.meter{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;display:block}
+.meter i{display:block;height:100%;border-radius:3px}
+.chip{font-family:var(--f-mono);font-size:.7rem;padding:1px 6px;border-radius:999px;background:var(--surface);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.chip .k{width:6px;height:6px;border-radius:50%}
+.chip.done{background:var(--ok);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+
+/* HOY */
+.hoyhead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px}
+.hoyhead h2{font-size:clamp(1.6rem,4vw,2.3rem);font-weight:800;line-height:1.05}
+.hoyhead .sub{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.now{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:color-mix(in srgb,var(--c) var(--tint),var(--surface));border:1px solid var(--line);border-left:6px solid var(--c);border-radius:var(--r);padding:14px 16px}
+.now .lab{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.now b{font-family:var(--f-display);font-size:1.15rem;display:block}
+@media (max-width:560px){.now{grid-template-columns:1fr}.now .lab{order:-1}}
+.hoycols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.hcol{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--pc);border-radius:var(--r);padding:12px 14px;display:grid;gap:10px;min-width:0}
+.hcol header{display:flex;align-items:center;gap:8px}
+.hcol header h3{font-size:1.05rem}
+.hcol header .p{margin-left:auto;font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.hrow{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.hrow .bar4{align-self:stretch;border-radius:2px;background:var(--c)}
+.hrow .tx{display:grid;gap:2px;min-width:0;text-align:left;background:none;border:0;padding:0}
+.hrow .tx small{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.hrow .tx span{font-weight:600;font-size:.92rem}
+.hrow .tx em{font-style:normal;font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.check{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;font-weight:700;color:transparent}
+.check[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+.tasks{display:grid;gap:8px}
+.task{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.task .ti{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c);font-weight:800;font-family:var(--f-display)}
+.task p{margin:0;max-width:75ch}
+.task p b{font-weight:600}
+
+/* summary */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.who-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:10px}
+.who-card header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.who-card h3{font-size:1.05rem}
+.who-card .sub{color:var(--muted);font-size:.8rem;margin-left:auto}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.metric{display:grid;gap:4px;min-width:0}
+.metric .lab{font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.metric .val{font-family:var(--f-mono);font-size:.9rem}
+.metric .val small{color:var(--muted);font-size:.7rem}
+.adh{display:flex;align-items:center;gap:10px;font-size:.84rem}
+.adh b{font-family:var(--f-mono);font-size:1.25rem;font-weight:500}
+.msg{font-size:.84rem;margin:0;padding:8px 10px;border-radius:8px;background:var(--sunk)}
+@media (max-width:640px){.metrics{grid-template-columns:repeat(3,1fr)}}
+
+/* calendar */
+.weeknav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.weeknav h2{font-size:1.2rem}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.calwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.cal{display:grid;grid-template-columns:104px repeat(7,minmax(148px,1fr));min-width:1140px}
+.cal > div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.cal > div:nth-child(8n){border-right:0}
+.dayhead{padding:10px 10px 8px;display:grid;gap:4px;background:var(--surface)}
+.dayhead.today{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.dayhead .dn{font-family:var(--f-display);font-weight:700;font-size:1rem}
+.dayhead .dd{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.rowhead{padding:10px;display:flex;flex-direction:column;justify-content:center;gap:2px;background:var(--surface)}
+.rowhead b{font-family:var(--f-display);font-size:.92rem}
+.rowhead span{font-size:.72rem;color:var(--muted)}
+.cell{padding:6px;display:flex;flex-direction:column;gap:6px}
+.meal{--c:var(--des);text-align:left;border:0;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) var(--tint),var(--surface));border-radius:6px;padding:8px 9px;display:grid;gap:5px;width:100%;transition:transform .12s ease,box-shadow .12s ease}
+.meal:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgb(0 0 0 / .08)}
+.meal .mn{font-weight:600;font-size:.84rem;line-height:1.25}
+.meal .who{font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.meal .sw2{font-size:.64rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.meal.plain{--c:var(--muted);background:var(--sunk)}
+.cell .empty{font-size:.75rem;color:var(--muted);padding:6px}
+.totals{padding:8px 10px;display:grid;gap:7px;background:var(--surface)}
+.tline{display:grid;gap:3px}
+.tline .tt{display:flex;justify-content:space-between;gap:6px;font-size:.74rem}
+.tline .tt b{font-family:var(--f-mono);font-weight:500}
+.tline .tt span{color:var(--muted)}
+.daypick{display:none;gap:6px;overflow-x:auto;padding-bottom:2px}
+.daypick button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:6px 10px;display:grid;justify-items:center;gap:1px;min-width:50px}
+.daypick button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.daypick b{font-family:var(--f-display);font-size:.95rem}
+.daypick span{font-family:var(--f-mono);font-size:.7rem;opacity:.8}
+.dayview{display:none;flex-direction:column;gap:10px}
+.dv-slot{display:grid;gap:6px}
+.dv-slot h4{font-size:.85rem;font-weight:600}
+@media (max-width:760px){.calwrap{display:none}.daypick{display:flex}.dayview{display:flex}}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgb(10 16 12 / .45);z-index:40;display:flex;align-items:flex-end;justify-content:center;padding-top:calc(env(safe-area-inset-top,0px) + 24px)}
+.sheet{background:var(--bg);width:min(980px,100%);max-height:100%;overflow:auto;border-radius:16px 16px 0 0;padding:0 0 calc(24px + env(safe-area-inset-bottom,0px))}
+@media (min-width:761px){.scrim{align-items:center;padding:32px}.sheet{border-radius:16px;max-height:calc(100vh - 64px)}}
+.sh-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:14px max(18px,env(safe-area-inset-right,0px)) 12px max(18px,env(safe-area-inset-left,0px));display:flex;gap:12px;align-items:flex-start;z-index:1}
+.sh-head .t{display:grid;gap:6px;min-width:0;flex:1}
+.sh-head h2{font-size:1.3rem;font-weight:800}
+.sh-head .meta{display:flex;flex-wrap:wrap;gap:8px;font-size:.8rem;color:var(--muted);align-items:center}
+.sh-actions{display:flex;flex-wrap:wrap;gap:8px}
+.sh-body{padding:16px max(18px,env(safe-area-inset-right,0px)) 0 max(18px,env(safe-area-inset-left,0px));display:grid;gap:16px}
+.pcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.pcol{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--pc);border-radius:var(--r);padding:14px;display:grid;gap:12px;min-width:0}
+.pcol h3{font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.big{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.big b{font-family:var(--f-mono);font-size:1.7rem;font-weight:500}
+.big span{color:var(--muted);font-size:.85rem}
+.split{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--sunk)}
+.split i{display:block;height:100%}
+.mx{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:.78rem}
+.mx div{display:grid;gap:1px}
+.mx b{font-family:var(--f-mono);font-size:.95rem;font-weight:500}
+.mx span{color:var(--muted);display:flex;align-items:center;gap:4px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.82rem}
+th{font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:right;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td:first-child{font-family:var(--f-body);white-space:normal}
+tfoot td{font-weight:600;border-bottom:0}
+.donebtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-weight:600;font-size:.85rem;justify-self:start}
+.donebtn[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+.steps{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px}
+.steps h3{font-size:1rem;margin-bottom:8px}
+.steps ol{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:75ch}
+.alts{display:grid;gap:6px}
+.alt{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.alt .bar4{align-self:stretch;border-radius:2px;background:var(--c)}
+.alt b{font-size:.9rem;font-weight:600}
+.alt .d{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);text-align:right}
+.alt:hover{border-color:var(--c)}
+
+/* recetario */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{flex:1;min-width:200px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font:inherit;color:inherit}
+.fchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.fchip[aria-pressed="true"]{background:var(--c,var(--ink));border-color:var(--c,var(--ink));color:#fff}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.rcard{--c:var(--des);text-align:left;border:1px solid var(--line);border-top:4px solid var(--c);background:var(--surface);border-radius:var(--r);padding:12px;display:grid;gap:8px;align-content:start}
+.rcard:hover{border-color:var(--c)}
+.rcard b{font-family:var(--f-display);font-size:.98rem;line-height:1.2}
+.rcard .rm{display:flex;flex-wrap:wrap;gap:6px;font-size:.74rem;color:var(--muted);align-items:center}
+.hz{font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--sunk);color:var(--muted)}
+
+/* compra */
+.cfg{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.cfg label{font-size:.78rem;color:var(--muted);display:grid;gap:4px}
+.cfg select,.cfg input[type=date]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.shopsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:2px}
+.stat .lab{font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--f-mono);font-size:1.3rem;font-weight:500}
+.stat small{color:var(--muted);font-size:.76rem}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sec > header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:color-mix(in srgb,var(--sc) var(--tint),var(--surface));border-bottom:1px solid var(--line)}
+.sec > header h3{font-size:1rem}
+.sec > header .cnt{margin-left:auto;font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.ico{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--sc);color:#fff;flex:none}
+.ico svg{width:20px;height:20px}
+.item{display:grid;grid-template-columns:auto 40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item input{width:22px;height:22px;accent-color:var(--accent)}
+.thumb{width:40px;height:40px;border-radius:8px;background:color-mix(in srgb,var(--sc) 18%,var(--surface));color:var(--sc);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:.9rem}
+.iname{display:grid;gap:3px;min-width:0}
+.iname b{font-weight:600;font-size:.92rem}
+.iname .fmt{font-size:.78rem;color:var(--muted)}
+.uses{display:flex;flex-wrap:wrap;gap:4px}
+.uses span{font-size:.7rem;background:var(--sunk);border-radius:999px;padding:1px 7px;color:var(--muted)}
+.iprice{text-align:right;display:grid;gap:3px;justify-items:end}
+.iprice .qty{font-family:var(--f-mono);font-size:1.05rem;font-weight:500}
+.iprice .pp{font-family:var(--f-mono);font-size:.75rem;color:var(--muted)}
+.iprice .lnk{display:flex;gap:8px;align-items:center}
+.iprice a{font-size:.75rem;text-decoration:none;font-weight:600}
+.havebtn{border:1px solid var(--line);background:none;border-radius:999px;padding:2px 8px;font-size:.7rem;font-weight:600;color:var(--muted)}
+.havebtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.item.got{opacity:.5}
+.item.got .iname b{text-decoration:line-through}
+.item.have{opacity:.45}
+.hidegot .item.got,.hidegot .item.have{display:none}
+@media (max-width:560px){.item{grid-template-columns:auto 36px minmax(0,1fr)}.thumb{width:36px;height:36px}.iprice{grid-column:3;justify-items:start;text-align:left;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}}
+
+/* cocina */
+.cook{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.cook .wrap{display:grid;gap:16px;padding-block:14px 40px}
+.cook-top{display:flex;align-items:center;gap:10px}
+.cook-top h2{font-size:1.4rem;font-weight:800;flex:1;min-width:0}
+.weigh td{font-size:1rem}
+.weigh td.tot{font-size:1.15rem;font-weight:500;color:var(--ink)}
+.stepbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:14px}
+.stepbox .sn{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.stepbox p{font-size:clamp(1.15rem,3.5vw,1.5rem);line-height:1.35;margin:0;max-width:40ch;font-family:var(--f-display);font-weight:500}
+.stepnav{display:flex;gap:10px;flex-wrap:wrap}
+.timer{border:2px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:999px;padding:8px 16px;font-family:var(--f-mono);font-size:1rem;font-weight:500}
+.timer.run{background:var(--accent);color:var(--accent-ink)}
+.timer.end{background:var(--bad);border-color:var(--bad);color:#fff}
+.dots{display:flex;gap:6px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head><body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Nacho <span class="amp">&amp;</span> Teresa</h1><span class="sync" id="sync"><i></i><span>Solo este móvil</span></span></div>
+    <div class="seg" role="group" aria-label="Mostrar">
+      <button data-who="both">Los dos</button><button data-who="N">Nacho</button><button data-who="T">Teresa</button>
+    </div>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#hoy" data-tab="hoy">Hoy</a>
+      <a href="#plan" data-tab="plan">Plan</a>
+      <a href="#compra" data-tab="compra">Compra</a>
+      <a href="#recetas" data-tab="recetas">Recetas</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view" id="v-hoy"></section>
+  <section class="view" id="v-plan" hidden></section>
+  <section class="view" id="v-compra" hidden></section>
+  <section class="view" id="v-recetas" hidden></section>
+</main>
+<div class="scrim" id="scrim" hidden></div>
+<div class="cook" id="cook" hidden></div>
+
+<script>
+const D = {"foods": {"pollo": {"n": "Pechuga de pollo", "m": [110, 23, 0, 1.5, 0]}, "ternera": {"n": "Filetes de vacuno (añojo)", "m": [120, 21, 0, 4, 0]}, "picada": {"n": "Carne picada de vacuno", "m": [190, 18, 1, 13, 0]}, "salmon": {"n": "Lomo de salmón", "m": [200, 20, 0, 13, 0]}, "salmon_ah": {"n": "Salmón ahumado", "m": [170, 21, 0, 9.5, 0]}, "merluza": {"n": "Lomo de merluza", "m": [75, 17, 0, 1, 0]}, "langostino": {"n": "Langostino pelado", "m": [80, 18, 0.5, 1, 0]}, "atun": {"n": "Atún claro al natural", "m": [105, 24, 0, 1, 0], "g": 56, "un": "lata"}, "huevo": {"n": "Huevo L", "m": [143, 12.6, 0.7, 9.5, 0], "g": 55, "un": "huevo"}, "claras": {"n": "Claras de huevo", "m": [48, 11, 0.7, 0.2, 0], "ml": 1}, "pavo": {"n": "Pechuga de pavo en lonchas", "m": [95, 18, 2, 1.5, 0]}, "jamon": {"n": "Jamón serrano", "m": [240, 30, 0, 13, 0]}, "batido": {"n": "Queso fresco batido 0%", "m": [46, 8, 3.5, 0.2, 0]}, "burgos": {"n": "Queso fresco Burgos 0%", "m": [70, 12, 3, 0.5, 0]}, "griego": {"n": "Yogur griego natural ligero", "m": [62, 6, 4.5, 2, 0]}, "mozz": {"n": "Mozzarella fresca light", "m": [160, 18, 1.5, 9, 0]}, "whey": {"n": "Proteína whey", "m": [380, 78, 6, 6, 0]}, "avena": {"n": "Avena molida", "m": [370, 13, 59, 7, 10]}, "arroz": {"n": "Arroz basmati (crudo)", "m": [350, 8, 77, 0.6, 1.3]}, "pan": {"n": "Pan de molde 100% integral", "m": [240, 11, 38, 3.5, 7], "g": 27, "un": "rebanada"}, "tortilla": {"n": "Tortilla de trigo integral", "m": [300, 9, 47, 7, 7], "g": 45, "un": "tortilla"}, "panecillo": {"n": "Panecillo integral 100%", "m": [250, 10, 44, 3, 7], "g": 45, "un": "panecillo"}, "tortita": {"n": "Tortita de arroz", "m": [385, 8, 81, 3, 3], "g": 8, "un": "tortita"}, "garbanzo": {"n": "Garbanzo cocido", "m": [120, 7, 15, 2.5, 5]}, "patata": {"n": "Patata", "m": [77, 2, 17, 0.1, 2]}, "boniato": {"n": "Boniato", "m": [86, 1.6, 20, 0.1, 3]}, "brocoli": {"n": "Brócoli", "m": [34, 2.8, 4, 0.4, 2.6]}, "esparrago": {"n": "Espárrago verde", "m": [20, 2.2, 2, 0.1, 2]}, "pimiento": {"n": "Pimiento", "m": [26, 1, 5, 0.3, 2]}, "cebolla": {"n": "Cebolla", "m": [40, 1.1, 9, 0.1, 1.7]}, "calabacin": {"n": "Calabacín", "m": [17, 1.2, 3, 0.3, 1]}, "tomate": {"n": "Tomate", "m": [18, 0.9, 3.9, 0.2, 1.2]}, "cherry": {"n": "Tomate cherry", "m": [18, 0.9, 3.9, 0.2, 1.2]}, "lechuga": {"n": "Lechuga / ensalada", "m": [15, 1.3, 2, 0.2, 1.5]}, "zanahoria": {"n": "Zanahoria", "m": [41, 0.9, 9.6, 0.2, 2.8]}, "espinaca": {"n": "Espinacas baby", "m": [23, 2.9, 3.6, 0.4, 2.2]}, "champi": {"n": "Champiñón laminado", "m": [22, 3, 3, 0.3, 1]}, "aguacate": {"n": "Aguacate", "m": [160, 2, 9, 15, 7]}, "platano": {"n": "Plátano", "m": [89, 1.1, 23, 0.3, 2.6], "g": 120, "un": "plátano"}, "manzana": {"n": "Manzana", "m": [52, 0.3, 14, 0.2, 2.4], "g": 180, "un": "manzana"}, "kiwi": {"n": "Kiwi", "m": [61, 1.1, 15, 0.5, 3], "g": 90, "un": "kiwi"}, "frutos_rojos": {"n": "Frutos rojos (fresas y arándanos)", "m": [40, 0.8, 8, 0.4, 3]}, "chia": {"n": "Semillas de chía", "m": [486, 17, 42, 31, 34]}, "cacahuete": {"n": "Crema de cacahuete 100%", "m": [600, 25, 16, 50, 6]}, "cacao": {"n": "Cacao puro en polvo", "m": [360, 20, 15, 11, 30]}, "aove": {"n": "Aceite de oliva virgen extra", "m": [900, 0, 0, 100, 0]}, "soja": {"n": "Salsa de soja", "m": [60, 8, 6, 0, 0], "ml": 1}, "tomate_frito": {"n": "Tomate frito sin azúcar", "m": [60, 1.5, 6, 3, 1.5]}, "choco": {"n": "Chocolate negro 85%", "m": [590, 10, 20, 48, 12]}, "s_yogur": {"n": "Salsa de yogur (lima-ajo / eneldo)", "m": [58, 6.5, 4.2, 1.5, 0]}, "s_burger": {"n": "Salsa burger fit", "m": [54, 7.4, 3.9, 1.1, 0]}, "s_mostaza": {"n": "Salsa de miel y mostaza", "m": [60, 7, 5.5, 1.2, 0]}, "s_sriracha": {"n": "Salsa sriracha fit", "m": [62, 6, 5, 2, 0.3]}, "teriyaki": {"n": "Salsa teriyaki casera", "m": [62, 3.6, 11.5, 0, 0]}, "contramuslo": {"n": "Contramuslo de pollo sin piel", "m": [150, 19, 0, 8, 0]}, "quinoa": {"n": "Quinoa (cruda)", "m": [368, 14, 64, 6, 7]}, "arroz_int": {"n": "Arroz integral (crudo)", "m": [350, 7.5, 73, 2.7, 3.5]}, "lenteja": {"n": "Lenteja cocida", "m": [116, 9, 16, 0.4, 8]}, "alubia_b": {"n": "Alubia blanca cocida", "m": [100, 7, 13, 0.5, 6]}, "alubia_r": {"n": "Alubia roja cocida", "m": [110, 8, 15, 0.5, 7]}, "pasta_len": {"n": "Pasta 100% lenteja roja (cruda)", "m": [340, 24, 48, 2, 11]}, "bacalao": {"n": "Bacalao (porciones)", "m": [80, 18, 0, 0.7, 0]}, "cottage": {"n": "Queso cottage", "m": [95, 11, 3.5, 4, 0]}, "cac_polvo": {"n": "Cacahuete en polvo desgrasado", "m": [400, 47, 20, 12, 10]}, "almendra": {"n": "Almendra natural", "m": [600, 21, 6, 52, 12]}, "leche_prot": {"n": "Leche desnatada +Proteínas", "m": [47, 6, 4.8, 0.3, 0], "ml": 1}, "maicena": {"n": "Maicena", "m": [350, 0.3, 87, 0.1, 1]}, "miel": {"n": "Miel", "m": [320, 0.3, 80, 0, 0]}, "tortita_maiz": {"n": "Tortita de maíz", "m": [380, 8, 80, 3, 4], "g": 7, "un": "tortita"}}, "rec": {"des_n": {"id": "des_n", "n": "Tostadas de aguacate, huevo y salmón", "t": "des", "min": 10, "N": [["pan", 2], ["aguacate", 40], ["huevo", 1], ["claras", 150], ["salmon_ah", 50]], "T": null, "steps": ["Tuesta las 2 rebanadas.", "Aplasta el aguacate con limón, sal y pimienta y úntalo.", "Revuelto de 1 huevo + claras a fuego medio, 2–3 min removiendo.", "Monta: aguacate, revuelto y salmón ahumado por encima. Opcional: cebollino o pimienta negra."], "note": "Desayuno fijo de Nacho. Cambia el salmón por 60 g de jamón serrano algún día si quieres ahorrar.", "salsa": null, "tags": []}, "des_t": {"id": "des_t", "n": "Tostadas con pavo, tomate y queso fresco", "t": "des", "min": 5, "N": null, "T": [["pan", 2], ["tomate", 60], ["aove", 3], ["pavo", 60], ["burgos", 40], ["kiwi", 1]], "steps": ["Tuesta las 2 rebanadas.", "Ralla el tomate encima con un hilo de aceite y sal.", "Pon las lonchas de pavo y el queso fresco en láminas.", "Kiwi de postre (fibra y potasio)."], "note": "Desayuno fijo de Teresa. Vale para llevar al cole si sale muy temprano.", "salsa": null, "tags": []}, "teriyaki": {"id": "teriyaki", "n": "Pollo teriyaki con arroz y brócoli", "t": "alm", "min": 25, "N": [["pollo", 200], ["arroz", 70], ["brocoli", 150], ["aove", 5], ["teriyaki", 40]], "T": [["pollo", 150], ["arroz", 45], ["brocoli", 150], ["pimiento", 80], ["aove", 5], ["teriyaki", 40]], "steps": ["Cuece el arroz (10–12 min).", "Pollo en dados, dóralo con el aceite 6–7 min.", "Añade la salsa teriyaki y reduce 2 min hasta que brille.", "Brócoli en sartén con un dedo de agua y tapa 4 min; destapa y deja que se dore."], "note": "Tupper de Nacho para lunes y miércoles: se cocina el domingo.", "salsa": "teriyaki", "tags": []}, "curry": {"id": "curry", "n": "Pollo al curry de yogur con arroz", "t": "alm", "min": 25, "N": [["pollo", 200], ["griego", 60], ["arroz", 70], ["pimiento", 60], ["cebolla", 50], ["calabacin", 50], ["aove", 5]], "T": [["pollo", 150], ["griego", 50], ["arroz", 45], ["pimiento", 80], ["cebolla", 50], ["calabacin", 80], ["espinaca", 40], ["aove", 5]], "steps": ["Mezcla el pollo con el yogur, 1 cdta de curry, ½ de pimentón, ajo granulado y sal (10 min o toda la noche).", "Sofríe cebolla y pimiento 5 min.", "Añade pollo y calabacín, 8–10 min a fuego medio.", "Sirve con el arroz."], "note": "Tupper de Nacho para el martes.", "salsa": null, "tags": []}, "salmon": {"id": "salmon", "n": "Salmón con boniato y espárragos", "t": "alm", "min": 30, "N": [["salmon", 150], ["boniato", 200], ["esparrago", 150], ["s_yogur", 80]], "T": [["salmon", 100], ["boniato", 150], ["esparrago", 120], ["calabacin", 100], ["s_yogur", 60]], "steps": ["Boniato en dados con spray de aceite, pimentón y sal.", "Airfryer 200 °C 18 min (horno 200 °C 25 min).", "Últimos 10 min: salmón y espárragos en la misma bandeja.", "Sirve con la salsa de yogur y eneldo."], "note": "", "salsa": "s_eneldo", "tags": []}, "tacos": {"id": "tacos", "n": "Tacos de ternera con salsa de yogur y lima", "t": "alm", "min": 20, "N": [["ternera", 180], ["tortilla", 2], ["pimiento", 60], ["cebolla", 40], ["aguacate", 30], ["s_yogur", 60], ["aove", 3]], "T": [["ternera", 130], ["tortilla", 1], ["lechuga", 40], ["pimiento", 90], ["cebolla", 60], ["aguacate", 30], ["s_yogur", 60], ["aove", 3]], "steps": ["Ternera en tiras con comino, pimentón ahumado, ajo y sal.", "Sartén muy caliente: pimiento y cebolla 5 min.", "Carne 2–3 min, que quede jugosa.", "Calienta las tortillas y monta con aguacate y salsa. Teresa usa hojas de lechuga como segundo taco."], "note": "", "salsa": "s_lima", "tags": []}, "burger": {"id": "burger", "n": "Burger casera fit con patatas gajo", "t": "alm", "min": 30, "N": [["picada", 160], ["panecillo", 1], ["patata", 180], ["aove", 4], ["lechuga", 30], ["tomate", 60], ["cebolla", 20], ["s_burger", 40]], "T": [["picada", 130], ["patata", 150], ["aove", 3], ["lechuga", 80], ["tomate", 120], ["cebolla", 30], ["zanahoria", 50], ["s_burger", 40]], "steps": ["Patatas en gajos con el aceite, pimentón y sal: airfryer 200 °C 20 min.", "Forma la burger con sal, pimienta y ajo.", "Plancha 3–4 min por lado.", "Nacho en panecillo; Teresa en bowl con ensalada grande. Si Teresa entrena ese día, un huevo a la plancha encima."], "note": "", "salsa": "s_burger", "tags": []}, "arroz": {"id": "arroz", "n": "Arroz salteado con langostinos y huevo", "t": "alm", "min": 20, "N": [["arroz", 70], ["langostino", 150], ["huevo", 1], ["claras", 100], ["pimiento", 50], ["cebolla", 40], ["zanahoria", 30], ["calabacin", 30], ["soja", 10], ["aove", 5]], "T": [["arroz", 45], ["langostino", 120], ["huevo", 1], ["pimiento", 60], ["cebolla", 40], ["zanahoria", 50], ["calabacin", 50], ["soja", 10], ["aove", 4]], "steps": ["Usa arroz cocido del día anterior (frío queda suelto).", "Revuelto de huevo y claras, reserva.", "Verduras a fuego fuerte 4 min, langostinos 2 min.", "Arroz y soja 2 min más; vuelve a meter el huevo."], "note": "", "salsa": null, "tags": []}, "ensalada": {"id": "ensalada", "n": "Ensalada de atún, huevo y patata", "t": "cen", "min": 20, "N": [["atun", 2], ["huevo", 2], ["patata", 200], ["lechuga", 80], ["tomate", 100], ["cebolla", 20], ["zanahoria", 30], ["aove", 5], ["s_mostaza", 50]], "T": [["atun", 1.5], ["huevo", 1], ["garbanzo", 100], ["lechuga", 80], ["espinaca", 40], ["tomate", 120], ["cebolla", 20], ["zanahoria", 50], ["aove", 5], ["s_mostaza", 50]], "steps": ["Huevos y patata cocidos del batch del domingo.", "Bol grande: lechuga, tomate, cebolla y zanahoria rallada.", "Atún escurrido, huevo en cuartos y patata (Nacho) o garbanzos (Teresa).", "Aliña con aceite y vinagre; salsa de miel y mostaza por encima."], "note": "", "salsa": "s_mostaza", "tags": []}, "wraps": {"id": "wraps", "n": "Wraps de pollo crujiente con salsa burger", "t": "cen", "min": 20, "N": [["pollo", 180], ["tortilla", 2], ["lechuga", 40], ["tomate", 60], ["cebolla", 20], ["s_burger", 60], ["aove", 5], ["soja", 5]], "T": [["pollo", 130], ["tortilla", 1], ["lechuga", 50], ["tomate", 80], ["pimiento", 60], ["s_burger", 50], ["aove", 3], ["soja", 5]], "steps": ["Pollo en tiras con pimentón ahumado, ajo, sal y un chorrito de soja.", "Sartén fuerte 6–7 min hasta que se tueste.", "Monta el wrap con lechuga, tomate y salsa.", "Dóralo 1 min por lado en la sartén para que cruja."], "note": "", "salsa": "s_burger", "tags": []}, "tortilla": {"id": "tortilla", "n": "Tortilla de claras con verduras y jamón", "t": "cen", "min": 15, "N": [["huevo", 2], ["claras", 250], ["calabacin", 100], ["pimiento", 60], ["cebolla", 40], ["aove", 5], ["pan", 1], ["tomate", 40], ["jamon", 30]], "T": [["huevo", 1], ["claras", 200], ["calabacin", 100], ["pimiento", 50], ["cebolla", 30], ["espinaca", 40], ["champi", 50], ["aove", 4], ["pan", 1], ["tomate", 40]], "steps": ["Pocha las verduras con el aceite 6 min.", "Añade huevos y claras batidos con sal.", "Tapa y cuaja 4–5 min a fuego bajo; dale la vuelta con un plato.", "Pan con tomate al lado; jamón para Nacho."], "note": "", "salsa": null, "tags": []}, "merluza": {"id": "merluza", "n": "Merluza con brócoli en sartén y patata", "t": "cen", "min": 20, "N": [["merluza", 230], ["brocoli", 200], ["patata", 200], ["aove", 10], ["s_yogur", 60]], "T": [["merluza", 170], ["brocoli", 180], ["calabacin", 80], ["champi", 60], ["patata", 100], ["aove", 7], ["s_yogur", 50]], "steps": ["Patata en rodajas al microondas 6 min tapada, luego a la sartén para dorar.", "Brócoli en sartén como en el teriyaki.", "Merluza a la plancha 3 min por lado.", "Salsa verde de yogur: base de yogur con ajo, perejil y limón."], "note": "", "salsa": "s_verde", "tags": []}, "pizza": {"id": "pizza", "n": "Pizza fit de tortilla", "t": "cen", "min": 15, "N": [["tortilla", 2], ["tomate_frito", 50], ["pollo", 150], ["mozz", 50], ["pimiento", 40], ["cebolla", 20], ["aove", 3]], "T": [["tortilla", 1], ["tomate_frito", 40], ["pollo", 110], ["mozz", 35], ["champi", 40], ["espinaca", 30], ["pimiento", 30], ["lechuga", 60], ["tomate", 80]], "steps": ["Pollo a la plancha en tiras (o del día anterior).", "Tortilla de base: tomate, orégano, pollo, verduras y mozzarella troceada.", "Airfryer 190 °C 6–7 min u horno 220 °C 8 min, hasta que la base cruja.", "Teresa: ensalada de lechuga y tomate al lado."], "note": "", "salsa": null, "tags": []}, "poke": {"id": "poke", "n": "Poke de atún", "t": "cen", "min": 15, "N": [["arroz", 60], ["atun", 3], ["aguacate", 50], ["zanahoria", 40], ["cherry", 80], ["lechuga", 30], ["teriyaki", 20], ["s_sriracha", 50]], "T": [["arroz", 40], ["atun", 2], ["aguacate", 40], ["zanahoria", 50], ["cherry", 100], ["lechuga", 40], ["garbanzo", 60], ["teriyaki", 20], ["s_sriracha", 50]], "steps": ["Arroz cocido del batch, templado.", "Bol: arroz, atún escurrido, aguacate en dados, zanahoria rallada, cherrys y lechuga.", "Teresa añade garbanzos.", "Un poco de teriyaki por encima y la salsa sriracha fit."], "note": "", "salsa": "s_sriracha", "tags": []}, "pre": {"id": "pre", "n": "Merienda pre-entreno", "t": "mer", "min": 3, "N": [["tortita", 2], ["cacahuete", 10], ["platano", 1], ["whey", 25]], "T": null, "steps": ["Tortitas de arroz con crema de cacahuete y plátano en rodajas.", "Batido de whey en agua.", "Tómala 1–2 h antes de entrenar."], "note": "", "salsa": null, "tags": []}, "mousse_n": {"id": "mousse_n", "n": "Mousse de chocolate proteico + manzana", "t": "mer", "min": 3, "N": [["batido", 250], ["cacao", 10], ["manzana", 1]], "T": null, "steps": ["Mezcla el queso batido con el cacao y edulcorante al gusto.", "Opcional: 15 g de whey de chocolate (+60 kcal, +12 g de proteína).", "Manzana de acompañamiento."], "note": "", "salsa": null, "tags": []}, "yogur_fibra": {"id": "yogur_fibra", "n": "Yogur de fibra", "t": "mer", "min": 3, "N": null, "T": [["batido", 200], ["frutos_rojos", 100], ["chia", 10]], "steps": ["Queso batido con frutos rojos descongelados.", "Chía y canela por encima. Si lo dejas 10 min, la chía espesa."], "note": "", "salsa": null, "tags": []}, "yogur_fibra_sc": {"id": "yogur_fibra_sc", "n": "Yogur de fibra (sin chía)", "t": "mer", "min": 3, "N": null, "T": [["batido", 200], ["frutos_rojos", 100]], "steps": ["Queso batido con frutos rojos y canela."], "note": "El miércoles va sin chía para no pasarse de calorías (día de descanso).", "salsa": null, "tags": []}, "tarta": {"id": "tarta", "n": "Tarta de queso fit (1 ración)", "t": "pos", "min": 35, "N": [["batido", 125], ["huevo", 0.5], ["avena", 7.5], ["frutos_rojos", 30]], "T": [["batido", 125], ["huevo", 0.5], ["avena", 7.5], ["frutos_rojos", 30]], "steps": ["Para 4 raciones: 500 g de queso batido, 2 huevos, 30 g de avena molida, edulcorante y ralladura de limón.", "Bate todo y vierte en un molde.", "Airfryer 160 °C 25 min o microondas 8–9 min.", "Enfría en la nevera. Frutos rojos por encima al servir."], "note": "Se hace el domingo y dura 4 días.", "salsa": null, "tags": []}, "mousse_t": {"id": "mousse_t", "n": "Mousse de chocolate proteico", "t": "pos", "min": 3, "N": [["batido", 250], ["cacao", 10]], "T": [["batido", 150], ["cacao", 7]], "steps": ["Queso batido + cacao + edulcorante. Bate bien con una cuchara."], "note": "", "salsa": null, "tags": []}, "fruta": {"id": "fruta", "n": "Fruta extra", "t": "pos", "min": 0, "N": null, "T": [["manzana", 1]], "steps": ["Una manzana."], "note": "", "salsa": null, "tags": []}, "tortitas": {"id": "tortitas", "n": "Tortitas de avena y claras", "t": "des", "min": 15, "N": [["avena", 50], ["huevo", 1], ["claras", 100], ["batido", 150], ["frutos_rojos", 80], ["cacahuete", 10]], "T": [["avena", 35], ["huevo", 1], ["claras", 80], ["batido", 100], ["frutos_rojos", 80]], "steps": ["Bate avena, huevo, claras, canela, edulcorante y una pizca de levadura.", "Reposa 2 min.", "Sartén con spray de aceite, tortitas pequeñas 1–2 min por lado.", "Queso batido y fruta por encima."], "note": "Alternativa de fin de semana.", "salsa": null, "tags": ["alternativa"]}, "helado": {"id": "helado", "n": "Helado de plátano y cacao", "t": "pos", "min": 5, "N": [["platano", 1], ["batido", 100], ["cacao", 5], ["cacahuete", 5]], "T": [["platano", 1], ["batido", 100], ["cacao", 5], ["cacahuete", 5]], "steps": ["Plátano en rodajas congelado.", "Tritura con el queso batido, el cacao y la crema de cacahuete."], "note": "", "salsa": null, "tags": ["alternativa"]}, "brownie": {"id": "brownie", "n": "Brownie en taza", "t": "pos", "min": 3, "N": [["avena", 20], ["claras", 50], ["batido", 50], ["cacao", 5], ["choco", 10]], "T": [["avena", 20], ["claras", 50], ["batido", 50], ["cacao", 5], ["choco", 10]], "steps": ["Mezcla avena, claras, queso batido, cacao y edulcorante en una taza.", "Hunde una onza de chocolate 85% en el centro.", "Microondas 90 s."], "note": "", "salsa": null, "tags": ["alternativa"]}, "fresas": {"id": "fresas", "n": "Fresas con \"nata\" fit", "t": "pos", "min": 3, "N": [["frutos_rojos", 150], ["batido", 100]], "T": [["frutos_rojos", 150], ["batido", 100]], "steps": ["Queso batido con edulcorante y unas gotas de vainilla.", "Por encima de las fresas."], "note": "", "salsa": null, "tags": ["alternativa"]}, "choco_n": {"id": "choco_n", "n": "Chocolate negro 85% (15 g)", "t": "pos", "min": 0, "N": [["choco", 15]], "T": null, "steps": ["1 onza y media con el café o después de cenar."], "note": "", "salsa": null, "tags": []}, "porridge": {"id": "porridge", "n": "Porridge proteico de chocolate", "t": "des", "min": 8, "N": [["avena", 50], ["leche_prot", 250], ["whey", 20], ["cacao", 5], ["platano", 0.5]], "T": [["avena", 30], ["leche_prot", 250], ["whey", 15], ["cacao", 5], ["platano", 0.5]], "steps": ["Calienta la avena con la leche 3–4 min removiendo.", "Fuera del fuego, añade cacao y whey.", "Plátano en rodajas por encima."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "fitia"}, "overnight": {"id": "overnight", "n": "Overnight oats de frutos rojos", "t": "des", "min": 5, "N": [["avena", 45], ["griego", 120], ["leche_prot", 100], ["chia", 8], ["frutos_rojos", 80], ["whey", 15]], "T": [["avena", 30], ["griego", 120], ["leche_prot", 100], ["chia", 8], ["frutos_rojos", 80], ["whey", 11]], "steps": ["La noche anterior: mezcla avena, yogur, leche, chía y whey en un bote.", "Por la mañana, frutos rojos por encima."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "fitia"}, "french": {"id": "french", "n": "Tostada francesa proteica", "t": "des", "min": 12, "N": [["pan", 2], ["huevo", 1], ["claras", 100], ["leche_prot", 50], ["batido", 120], ["frutos_rojos", 80]], "T": [["pan", 1.5], ["huevo", 1.0], ["claras", 70], ["leche_prot", 50], ["batido", 85], ["frutos_rojos", 80]], "steps": ["Bate huevo, claras, leche, canela y edulcorante.", "Empapa el pan y dóralo en sartén con spray de aceite, 2 min por lado.", "Sirve con queso batido y fresas."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "redes"}, "omelette": {"id": "omelette", "n": "Omelette de claras con jamón y tostada", "t": "des", "min": 10, "N": [["huevo", 1], ["claras", 200], ["jamon", 30], ["tomate", 60], ["pan", 2], ["aove", 3]], "T": [["huevo", 1.0], ["claras", 145], ["jamon", 20], ["tomate", 85], ["pan", 1.5], ["aove", 2]], "steps": ["Bate huevo y claras con sal.", "Cuaja en sartén 2 min, añade jamón y tomate y dobla.", "Tostadas al lado."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "fitia"}, "muffins": {"id": "muffins", "n": "Muffins de huevo (meal prep)", "t": "des", "min": 25, "N": [["huevo", 2], ["claras", 150], ["pimiento", 50], ["cebolla", 30], ["jamon", 25], ["mozz", 25], ["pan", 1]], "T": [["huevo", 1.5], ["claras", 110], ["pimiento", 70], ["cebolla", 40], ["jamon", 20], ["mozz", 20], ["pan", 1.0]], "steps": ["Para 6 muffins: 4 huevos, 300 ml de claras, verdura picada, jamón y mozzarella.", "Reparte en molde de magdalenas de silicona.", "Airfryer 170 °C 14 min u horno 180 °C 18 min.", "Duran 4 días en la nevera: 3 muffins por ración de Nacho, 2 de Teresa."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "redes"}, "crepes": {"id": "crepes", "n": "Crepes de avena con queso batido y plátano", "t": "des", "min": 15, "N": [["avena", 40], ["huevo", 1], ["claras", 100], ["batido", 150], ["platano", 0.5], ["cacao", 3]], "T": [["avena", 25], ["huevo", 1.0], ["claras", 70], ["batido", 110], ["platano", 0.5], ["cacao", 3]], "steps": ["Tritura avena, huevo y claras hasta una masa líquida.", "Sartén antiadherente, crepes finas 1 min por lado.", "Rellena con queso batido, cacao y plátano."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "fitia"}, "bowl_griego": {"id": "bowl_griego", "n": "Bowl de yogur, avena y cacahuete", "t": "des", "min": 5, "N": [["griego", 200], ["batido", 100], ["avena", 35], ["cac_polvo", 12], ["frutos_rojos", 80]], "T": [["griego", 200], ["batido", 70], ["avena", 20], ["cac_polvo", 9], ["frutos_rojos", 80]], "steps": ["Mezcla yogur y queso batido.", "Avena tostada en sartén 2 min, cacahuete en polvo y fruta por encima."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "vitonica"}, "huevos_boniato": {"id": "huevos_boniato", "n": "Huevos revueltos con boniato y aguacate", "t": "des", "min": 15, "N": [["huevo", 2], ["claras", 100], ["boniato", 150], ["aguacate", 40]], "T": [["huevo", 1.5], ["claras", 70], ["boniato", 95], ["aguacate", 30]], "steps": ["Boniato en dados al microondas 5 min y dorado en sartén.", "Revuelto de huevos y claras.", "Aguacate en láminas y pimentón por encima."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": "redes"}, "tostada_jamon": {"id": "tostada_jamon", "n": "Tostadas de tomate, jamón y huevo", "t": "des", "min": 8, "N": [["pan", 2], ["tomate", 80], ["aove", 4], ["jamon", 40], ["huevo", 1]], "T": [["pan", 1.5], ["tomate", 110], ["aove", 3], ["jamon", 30], ["huevo", 1.0]], "steps": ["Tuesta el pan, tomate rallado y aceite.", "Jamón por encima y un huevo a la plancha o cocido."], "note": "", "salsa": null, "tags": ["alternativa", "bd"], "src": null}, "pollo_limon": {"id": "pollo_limon", "n": "Pollo al limón con patatas y espárragos", "t": "alm", "min": 30, "N": [["pollo", 200], ["patata", 220], ["esparrago", 120], ["aove", 6], ["s_yogur", 50]], "T": [["pollo", 145], ["patata", 135], ["esparrago", 170], ["aove", 5], ["s_yogur", 40]], "steps": ["Pollo en dados con zumo y ralladura de limón, ajo, orégano y sal (10 min).", "Patata en dados con el aceite: airfryer 200 °C 20 min.", "Últimos 10 min, pollo y espárragos en la misma cesta."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "albondigas": {"id": "albondigas", "n": "Albóndigas de ternera en salsa de tomate con arroz", "t": "alm", "min": 35, "N": [["picada", 160], ["claras", 30], ["tomate_frito", 100], ["cebolla", 60], ["arroz", 65], ["aove", 3]], "T": [["picada", 115], ["claras", 30], ["tomate_frito", 85], ["cebolla", 85], ["arroz", 40], ["aove", 2]], "steps": ["Mezcla carne, claras, ajo, perejil y sal; forma 10–12 albóndigas.", "Dóralas en sartén o airfryer 190 °C 10 min.", "Sofríe cebolla, añade tomate y albóndigas, 10 min a fuego bajo.", "Sirve con arroz."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "pim_rellenos": {"id": "pim_rellenos", "n": "Pimientos rellenos de carne y arroz", "t": "alm", "min": 40, "N": [["picada", 150], ["pimiento", 250], ["arroz", 50], ["cebolla", 50], ["tomate_frito", 60], ["mozz", 30]], "T": [["picada", 110], ["pimiento", 350], ["arroz", 30], ["cebolla", 70], ["tomate_frito", 50], ["mozz", 20]], "steps": ["Pimientos en mitades, vacíalos.", "Sofríe cebolla y carne, añade arroz cocido y tomate.", "Rellena, mozzarella encima.", "Horno 200 °C 20 min o airfryer 180 °C 15 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "lasana_calabacin": {"id": "lasana_calabacin", "n": "Lasaña de calabacín", "t": "cen", "min": 35, "N": [["picada", 150], ["calabacin", 300], ["tomate_frito", 100], ["cebolla", 50], ["mozz", 40], ["pan", 1]], "T": [["picada", 110], ["calabacin", 420], ["tomate_frito", 85], ["cebolla", 70], ["mozz", 30], ["pan", 1.0]], "steps": ["Calabacín en láminas finas, a la plancha 1 min por lado.", "Boloñesa: cebolla, carne y tomate 10 min.", "Capas de calabacín y boloñesa, mozzarella arriba.", "Horno 200 °C 15 min o airfryer 180 °C 10 min. Pan para mojar."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "chili": {"id": "chili", "n": "Chili con carne y arroz", "t": "alm", "min": 30, "N": [["picada", 140], ["alubia_r", 100], ["tomate_frito", 100], ["pimiento", 80], ["cebolla", 60], ["arroz", 45]], "T": [["picada", 100], ["alubia_r", 60], ["tomate_frito", 85], ["pimiento", 110], ["cebolla", 85], ["arroz", 30]], "steps": ["Sofríe cebolla y pimiento 5 min.", "Carne con comino, pimentón y pimentón picante.", "Tomate y alubias, 10 min a fuego bajo.", "Sirve con arroz y una cucharada de yogur griego si quieres."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "burrito_bowl": {"id": "burrito_bowl", "n": "Burrito bowl de pollo", "t": "alm", "min": 25, "N": [["pollo", 190], ["arroz", 60], ["alubia_r", 60], ["tomate", 80], ["lechuga", 50], ["aguacate", 35], ["s_yogur", 50]], "T": [["pollo", 135], ["arroz", 35], ["alubia_r", 35], ["tomate", 110], ["lechuga", 70], ["aguacate", 30], ["s_yogur", 40]], "steps": ["Pollo en dados con comino, pimentón ahumado, ajo y lima.", "Sartén fuerte 7 min.", "Bol: arroz, alubias, lechuga, tomate, pollo y aguacate.", "Salsa de yogur y lima por encima."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "kebab_bowl": {"id": "kebab_bowl", "n": "Kebab bowl de pollo", "t": "alm", "min": 25, "N": [["pollo", 200], ["arroz", 65], ["lechuga", 60], ["tomate", 80], ["cebolla", 30], ["s_yogur", 70], ["aove", 4]], "T": [["pollo", 145], ["arroz", 40], ["lechuga", 85], ["tomate", 110], ["cebolla", 40], ["s_yogur", 60], ["aove", 3]], "steps": ["Marina el pollo con yogur, comino, pimentón, ajo y orégano.", "Sartén fuerte 8 min hasta que se tueste.", "Bol con arroz, ensalada y el pollo.", "Salsa de yogur y ajo tipo kebab."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "fajitas": {"id": "fajitas", "n": "Fajitas de pollo", "t": "alm", "min": 20, "N": [["pollo", 180], ["tortilla", 2], ["pimiento", 120], ["cebolla", 60], ["aguacate", 30], ["s_yogur", 50]], "T": [["pollo", 130], ["tortilla", 1.5], ["pimiento", 170], ["cebolla", 85], ["aguacate", 25], ["s_yogur", 40]], "steps": ["Pollo y verduras en tiras con comino, pimentón ahumado y ajo.", "Sartén muy caliente 7–8 min.", "Tortillas calientes, aguacate y salsa."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "smash_tacos": {"id": "smash_tacos", "n": "Smash burger tacos", "t": "alm", "min": 20, "N": [["picada", 150], ["tortilla", 2], ["lechuga", 40], ["tomate", 60], ["cebolla", 20], ["mozz", 25], ["s_burger", 50]], "T": [["picada", 110], ["tortilla", 1.5], ["lechuga", 55], ["tomate", 85], ["cebolla", 30], ["mozz", 20], ["s_burger", 40]], "steps": ["Extiende una bola de carne muy fina sobre cada tortilla.", "Sartén caliente con la carne hacia abajo, 3 min; da la vuelta 1 min con la mozzarella.", "Lechuga, tomate, cebolla y salsa burger."], "note": "La receta viral de TikTok, en versión fit.", "salsa": null, "tags": ["bd"], "src": "redes"}, "pasta_bolo": {"id": "pasta_bolo", "n": "Pasta de lentejas a la boloñesa", "t": "alm", "min": 25, "N": [["pasta_len", 80], ["picada", 110], ["tomate_frito", 100], ["cebolla", 50], ["zanahoria", 40]], "T": [["pasta_len", 50], ["picada", 80], ["tomate_frito", 85], ["cebolla", 70], ["zanahoria", 55]], "steps": ["Cuece la pasta 7–8 min.", "Sofríe cebolla y zanahoria picadas, añade carne y tomate, 10 min.", "Mezcla con la pasta."], "note": "La pasta de lenteja roja aporta 20 g de proteína por ración.", "salsa": null, "tags": ["bd"], "src": "fitia"}, "quinoa_salmon": {"id": "quinoa_salmon", "n": "Quinoa bowl de salmón y aguacate", "t": "cen", "min": 25, "N": [["quinoa", 55], ["salmon", 125], ["aguacate", 30], ["cherry", 80], ["zanahoria", 40], ["s_sriracha", 40]], "T": [["quinoa", 35], ["salmon", 90], ["aguacate", 25], ["cherry", 110], ["zanahoria", 55], ["s_sriracha", 35]], "steps": ["Cuece la quinoa 12 min.", "Salmón en dados con soja, airfryer 200 °C 8 min.", "Bol con quinoa, salmón, aguacate, cherry y zanahoria."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "salmon_teri": {"id": "salmon_teri", "n": "Salmón teriyaki con arroz y brócoli", "t": "alm", "min": 25, "N": [["salmon", 140], ["arroz", 60], ["brocoli", 150], ["teriyaki", 40]], "T": [["salmon", 100], ["arroz", 35], ["brocoli", 210], ["teriyaki", 35]], "steps": ["Salmón en airfryer 200 °C 9 min, glaseado con teriyaki los últimos 2 min.", "Brócoli en sartén.", "Sirve con arroz."], "note": "", "salsa": "teriyaki", "tags": ["bd"], "src": "redes"}, "bacalao_tomate": {"id": "bacalao_tomate", "n": "Bacalao con tomate, pimientos y patata", "t": "cen", "min": 30, "N": [["bacalao", 220], ["tomate_frito", 90], ["pimiento", 100], ["cebolla", 50], ["patata", 180], ["aove", 6]], "T": [["bacalao", 160], ["tomate_frito", 75], ["pimiento", 140], ["cebolla", 70], ["patata", 110], ["aove", 5]], "steps": ["Patata en rodajas al microondas 6 min.", "Sofríe cebolla y pimiento, añade tomate.", "Bacalao encima, tapa y 8 min a fuego bajo."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "merluza_papillote": {"id": "merluza_papillote", "n": "Merluza en papillote con verduras", "t": "alm", "min": 25, "N": [["merluza", 230], ["calabacin", 120], ["cebolla", 40], ["zanahoria", 50], ["patata", 200], ["aove", 8]], "T": [["merluza", 165], ["calabacin", 170], ["cebolla", 55], ["zanahoria", 70], ["patata", 125], ["aove", 6]], "steps": ["Patata en láminas finas en la base del papel de horno.", "Verduras en juliana, merluza, limón, aceite y sal.", "Cierra el paquete: horno 200 °C 18 min o airfryer 180 °C 15 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "langostinos_ajillo": {"id": "langostinos_ajillo", "n": "Langostinos al ajillo con calabacín y pan", "t": "cen", "min": 15, "N": [["langostino", 200], ["calabacin", 250], ["aove", 10], ["pan", 2]], "T": [["langostino", 145], ["calabacin", 350], ["aove", 8], ["pan", 1.5]], "steps": ["Calabacín en tiras finas tipo espagueti.", "Ajo laminado y guindilla en el aceite; langostinos 2 min.", "Calabacín 2 min más; perejil por encima. Pan para mojar."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "contramuslo_boniato": {"id": "contramuslo_boniato", "n": "Contramuslos al horno con boniato y pimiento", "t": "alm", "min": 35, "N": [["contramuslo", 200], ["boniato", 220], ["pimiento", 120], ["cebolla", 50]], "T": [["contramuslo", 145], ["boniato", 135], ["pimiento", 170], ["cebolla", 70]], "steps": ["Contramuslos con pimentón ahumado, ajo, tomillo y sal.", "Bandeja con boniato, pimiento y cebolla.", "Horno 200 °C 30 min o airfryer 190 °C 22 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "brochetas": {"id": "brochetas", "n": "Brochetas de pollo y pimiento con patatas gajo", "t": "alm", "min": 30, "N": [["pollo", 200], ["pimiento", 120], ["cebolla", 50], ["patata", 200], ["aove", 5], ["s_yogur", 50]], "T": [["pollo", 145], ["pimiento", 170], ["cebolla", 70], ["patata", 125], ["aove", 4], ["s_yogur", 40]], "steps": ["Pollo en dados marinado con pimentón, comino y limón.", "Brochetas alternando pollo, pimiento y cebolla.", "Patatas y brochetas en airfryer 200 °C 18–20 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "tortilla_patata": {"id": "tortilla_patata", "n": "Tortilla de patata en airfryer", "t": "cen", "min": 35, "N": [["huevo", 2], ["claras", 150], ["patata", 200], ["cebolla", 60], ["aove", 5], ["lechuga", 60], ["tomate", 80]], "T": [["huevo", 1.5], ["claras", 110], ["patata", 125], ["cebolla", 85], ["aove", 4], ["lechuga", 85], ["tomate", 110]], "steps": ["Patata y cebolla en láminas con el aceite: airfryer 180 °C 15 min.", "Mezcla con huevos y claras batidos.", "Molde en airfryer 170 °C 8–10 min.", "Ensalada de lechuga y tomate al lado."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "patata_atun": {"id": "patata_atun", "n": "Patata asada rellena de atún y yogur", "t": "cen", "min": 25, "N": [["patata", 320], ["atun", 3], ["griego", 60], ["cebolla", 20], ["tomate", 60], ["lechuga", 50]], "T": [["patata", 200], ["atun", 2.0], ["griego", 60], ["cebolla", 30], ["tomate", 85], ["lechuga", 70]], "steps": ["Patata pinchada al microondas 8–10 min.", "Ábrela y mezcla la pulpa con atún, yogur, cebolla picada y pimentón.", "Rellena y gratina 4 min en airfryer."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "boniato_bbq": {"id": "boniato_bbq", "n": "Boniato relleno de pollo BBQ fit", "t": "cen", "min": 30, "N": [["boniato", 250], ["pollo", 170], ["tomate_frito", 50], ["miel", 5], ["mozz", 25]], "T": [["boniato", 155], ["pollo", 120], ["tomate_frito", 40], ["miel", 5], ["mozz", 20]], "steps": ["Boniato partido por la mitad: microondas 8 min.", "Salsa BBQ fit: tomate, miel, pimentón ahumado y una gota de soja.", "Pollo desmigado con la salsa sobre el boniato, mozzarella encima.", "Airfryer 200 °C 5 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "quesadilla": {"id": "quesadilla", "n": "Quesadillas de pollo y mozzarella", "t": "cen", "min": 15, "N": [["tortilla", 2], ["pollo", 160], ["mozz", 40], ["pimiento", 60], ["cebolla", 30], ["s_sriracha", 40]], "T": [["tortilla", 1.5], ["pollo", 115], ["mozz", 30], ["pimiento", 85], ["cebolla", 40], ["s_sriracha", 35]], "steps": ["Pollo en tiras salteado con pimiento y cebolla.", "Rellena media tortilla con pollo y mozzarella, dobla.", "Sartén 2 min por lado hasta que funda."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "cesar": {"id": "cesar", "n": "Ensalada César fit", "t": "cen", "min": 20, "N": [["pollo", 180], ["lechuga", 150], ["pan", 2], ["huevo", 1], ["s_mostaza", 60]], "T": [["pollo", 130], ["lechuga", 210], ["pan", 1.5], ["huevo", 1.0], ["s_mostaza", 50]], "steps": ["Pollo a la plancha en tiras.", "Pan en dados tostado en airfryer 4 min (crutones).", "Lechuga romana, pollo, huevo cocido y crutones.", "Salsa César fit: yogur, mostaza, ajo, limón y una anchoa si te gusta."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "ens_lentejas": {"id": "ens_lentejas", "n": "Ensalada de lentejas con atún y huevo", "t": "cen", "min": 10, "N": [["lenteja", 120], ["atun", 1.5], ["huevo", 1], ["tomate", 100], ["pimiento", 50], ["cebolla", 20], ["aove", 6]], "T": [["lenteja", 75], ["atun", 1.0], ["huevo", 1.0], ["tomate", 140], ["pimiento", 70], ["cebolla", 30], ["aove", 5]], "steps": ["Lentejas cocidas lavadas.", "Mezcla con atún, huevo cocido y verdura picada.", "Aliña con aceite, vinagre y comino."], "note": "Mucha fibra. Si a Nacho no le gusta, cambia las lentejas por patata cocida.", "salsa": null, "tags": ["bd"], "src": "fitia"}, "shakshuka": {"id": "shakshuka", "n": "Shakshuka con pan", "t": "cen", "min": 20, "N": [["huevo", 2], ["claras", 150], ["jamon", 30], ["tomate_frito", 120], ["pimiento", 100], ["cebolla", 50], ["pan", 2]], "T": [["huevo", 1.5], ["claras", 110], ["jamon", 20], ["tomate_frito", 100], ["pimiento", 140], ["cebolla", 70], ["pan", 1.5]], "steps": ["Sofríe cebolla y pimiento 5 min con comino y pimentón.", "Añade el tomate y haz huecos.", "Casca los huevos y las claras, tapa 6 min.", "Pan para mojar."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "huevos_rotos": {"id": "huevos_rotos", "n": "Huevos rotos fit con jamón", "t": "cen", "min": 25, "N": [["patata", 220], ["huevo", 2], ["jamon", 35], ["aove", 5], ["pimiento", 60]], "T": [["patata", 135], ["huevo", 1.5], ["jamon", 25], ["aove", 4], ["pimiento", 85]], "steps": ["Patata en láminas con aceite y sal: airfryer 200 °C 18 min.", "Huevos a la plancha.", "Jamón por encima y rompe los huevos sobre las patatas."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "ternera_wok": {"id": "ternera_wok", "n": "Ternera al wok con brócoli y arroz", "t": "alm", "min": 20, "N": [["ternera", 180], ["brocoli", 150], ["pimiento", 60], ["cebolla", 40], ["soja", 15], ["arroz", 60], ["aove", 5]], "T": [["ternera", 130], ["brocoli", 210], ["pimiento", 85], ["cebolla", 55], ["soja", 15], ["arroz", 35], ["aove", 4]], "steps": ["Ternera en tiras finas con soja y ajo.", "Wok muy caliente: verduras 4 min.", "Ternera 2 min, que quede jugosa.", "Sirve con arroz."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "pollo_avena": {"id": "pollo_avena", "n": "Pollo crujiente rebozado en avena", "t": "alm", "min": 25, "N": [["pollo", 200], ["claras", 40], ["avena", 25], ["patata", 180], ["aove", 4], ["s_burger", 40]], "T": [["pollo", 145], ["claras", 40], ["avena", 15], ["patata", 110], ["aove", 3], ["s_burger", 35]], "steps": ["Pollo en tiras, pásalo por claras y luego por avena molida con pimentón y ajo.", "Airfryer 200 °C 12 min, dando la vuelta.", "Patatas gajo al lado (20 min) y salsa burger."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "salmon_almendra": {"id": "salmon_almendra", "n": "Salmón con costra de almendra y patata", "t": "alm", "min": 25, "N": [["salmon", 140], ["almendra", 8], ["patata", 200], ["esparrago", 120], ["s_yogur", 40]], "T": [["salmon", 100], ["almendra", 6], ["patata", 125], ["esparrago", 170], ["s_yogur", 35]], "steps": ["Almendra picada con perejil y ralladura de limón.", "Sobre el salmón con una pizca de mostaza.", "Patata y espárragos en airfryer 200 °C 18 min; salmón los últimos 9 min."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "ens_templada": {"id": "ens_templada", "n": "Ensalada templada de pollo, boniato y aguacate", "t": "cen", "min": 25, "N": [["pollo", 170], ["boniato", 180], ["lechuga", 80], ["tomate", 80], ["aguacate", 35], ["s_mostaza", 50]], "T": [["pollo", 120], ["boniato", 110], ["lechuga", 110], ["tomate", 110], ["aguacate", 30], ["s_mostaza", 40]], "steps": ["Boniato en dados en airfryer 200 °C 15 min.", "Pollo a la plancha en tiras.", "Bol con lechuga, tomate, boniato, pollo y aguacate."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "egg_wrap": {"id": "egg_wrap", "n": "Wrap de huevo con pollo y aguacate", "t": "cen", "min": 15, "N": [["huevo", 2], ["claras", 100], ["pollo", 100], ["aguacate", 30], ["lechuga", 40], ["tomate", 60], ["tortilla", 1], ["s_sriracha", 30]], "T": [["huevo", 1.5], ["claras", 70], ["pollo", 70], ["aguacate", 25], ["lechuga", 55], ["tomate", 85], ["tortilla", 1.0], ["s_sriracha", 25]], "steps": ["Tortilla de huevo y claras muy fina en sartén grande.", "Pon encima la tortilla de trigo para que se pegue, da la vuelta 30 s.", "Rellena con pollo, aguacate, lechuga, tomate y salsa; enrolla."], "note": "El \"egg wrap\" de las redes.", "salsa": null, "tags": ["bd"], "src": "redes"}, "pechuga_rellena": {"id": "pechuga_rellena", "n": "Pechuga rellena de jamón y mozzarella", "t": "cen", "min": 30, "N": [["pollo", 190], ["jamon", 25], ["mozz", 30], ["patata", 180], ["lechuga", 60], ["tomate", 80], ["aove", 4]], "T": [["pollo", 135], ["jamon", 20], ["mozz", 20], ["patata", 110], ["lechuga", 85], ["tomate", 110], ["aove", 3]], "steps": ["Abre la pechuga en libro, rellena con jamón y mozzarella, cierra con palillos.", "Airfryer 190 °C 16 min (horno 200 °C 22 min).", "Patata en dados en la misma cesta.", "Ensalada al lado."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "merluza_avena": {"id": "merluza_avena", "n": "Merluza crujiente en airfryer con ensalada", "t": "cen", "min": 20, "N": [["merluza", 230], ["claras", 30], ["avena", 20], ["patata", 180], ["lechuga", 60], ["tomate", 80], ["s_yogur", 40]], "T": [["merluza", 165], ["claras", 30], ["avena", 10], ["patata", 110], ["lechuga", 85], ["tomate", 110], ["s_yogur", 35]], "steps": ["Merluza por claras y avena molida con ajo y perejil.", "Airfryer 200 °C 10 min.", "Patata en dados 18 min antes.", "Ensalada y salsa de yogur."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}, "pollo_curry_coco": {"id": "pollo_curry_coco", "n": "Pollo tikka masala fit con arroz", "t": "alm", "min": 30, "N": [["pollo", 190], ["griego", 80], ["tomate_frito", 80], ["cebolla", 60], ["arroz", 65]], "T": [["pollo", 135], ["griego", 80], ["tomate_frito", 70], ["cebolla", 85], ["arroz", 40], ["espinaca", 60]], "steps": ["Marina el pollo con yogur, curry, comino, pimentón y ajo.", "Sofríe cebolla, añade pollo 6 min.", "Tomate y el resto del yogur, 8 min a fuego bajo.", "Teresa: espinacas al final."], "note": "", "salsa": null, "tags": ["bd"], "src": "fitia"}, "alubias_langostinos": {"id": "alubias_langostinos", "n": "Alubias blancas con langostinos", "t": "cen", "min": 15, "N": [["alubia_b", 150], ["langostino", 150], ["pimiento", 60], ["cebolla", 40], ["tomate_frito", 40], ["aove", 6]], "T": [["alubia_b", 95], ["langostino", 110], ["pimiento", 85], ["cebolla", 55], ["tomate_frito", 35], ["aove", 5]], "steps": ["Sofríe cebolla y pimiento con pimentón.", "Langostinos 2 min.", "Alubias lavadas y el tomate, 4 min."], "note": "Plato de cuchara sin caldo: sin consistencia de sopa.", "salsa": null, "tags": ["bd"], "src": "fitia"}, "batido_platano": {"id": "batido_platano", "n": "Batido proteico de plátano y cacao", "t": "mer", "min": 3, "N": [["leche_prot", 250], ["whey", 25], ["platano", 1], ["cacao", 5]], "T": [["leche_prot", 250], ["whey", 20], ["platano", 1.0], ["cacao", 5]], "steps": ["Tritura todo con hielo."], "note": "", "salsa": null, "tags": ["bd"], "src": "hsn"}, "tortitas_jamon": {"id": "tortitas_jamon", "n": "Tortitas de arroz con jamón y tomate", "t": "mer", "min": 3, "N": [["tortita", 3], ["tomate", 60], ["jamon", 40], ["aove", 3]], "T": [["tortita", 2.0], ["tomate", 60], ["jamon", 30], ["aove", 2]], "steps": ["Tomate rallado con aceite sobre las tortitas y jamón encima."], "note": "", "salsa": null, "tags": ["bd"], "src": null}, "cottage_fruta": {"id": "cottage_fruta", "n": "Cottage con frutos rojos y almendra", "t": "mer", "min": 3, "N": null, "T": [["cottage", 150], ["frutos_rojos", 100], ["almendra", 8]], "steps": ["Cottage con fruta, almendra picada y canela."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "griego_cacahuete": {"id": "griego_cacahuete", "n": "Yogur griego con cacahuete en polvo y plátano", "t": "mer", "min": 3, "N": [["griego", 200], ["cac_polvo", 15], ["platano", 0.5]], "T": [["griego", 200], ["cac_polvo", 11], ["platano", 0.5]], "steps": ["Mezcla el cacahuete en polvo con un poco de agua para hacer crema.", "Sobre el yogur con plátano."], "note": "", "salsa": null, "tags": ["bd"], "src": "hsn"}, "huevos_fruta": {"id": "huevos_fruta", "n": "Huevos cocidos y fruta", "t": "mer", "min": 12, "N": [["huevo", 2], ["manzana", 1]], "T": [["huevo", 1.5], ["manzana", 1.0]], "steps": ["Huevos cocidos 10 min (hazlos en el batch).", "Una manzana o fruta de temporada."], "note": "", "salsa": null, "tags": ["bd"], "src": null}, "bocata_atun": {"id": "bocata_atun", "n": "Mini bocadillo de atún y tomate", "t": "mer", "min": 5, "N": [["pan", 2], ["atun", 1], ["tomate", 60], ["s_mostaza", 20]], "T": [["pan", 1.5], ["atun", 1.0], ["tomate", 60], ["s_mostaza", 20]], "steps": ["Pan integral con tomate, atún y un poco de salsa de miel y mostaza."], "note": "", "salsa": null, "tags": ["bd"], "src": null}, "natillas": {"id": "natillas", "n": "Natillas proteicas caseras", "t": "pos", "min": 15, "N": [["leche_prot", 200], ["huevo", 0.5], ["maicena", 10], ["cacao", 0]], "T": [["leche_prot", 200], ["huevo", 0.5], ["maicena", 10], ["cacao", 1]], "steps": ["Para 2: 400 ml de leche +Proteínas, 1 huevo, 20 g de maicena, canela, vainilla y edulcorante.", "Calienta removiendo hasta que espese (6–8 min).", "Enfría en vasitos con canela por encima."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "galletas": {"id": "galletas", "n": "Galletas de avena y plátano (2 uds)", "t": "pos", "min": 20, "N": [["avena", 20], ["platano", 0.5], ["choco", 5]], "T": [["avena", 20], ["platano", 0.5], ["choco", 5]], "steps": ["Para 8: 2 plátanos maduros, 80 g de avena, canela y 20 g de chocolate 85% picado.", "Bolitas aplastadas: airfryer 170 °C 10 min.", "Duran 4 días en un táper."], "note": "", "salsa": null, "tags": ["bd"], "src": "dap"}, "trufas": {"id": "trufas", "n": "Trufas de cacao y cacahuete (3 uds)", "t": "pos", "min": 10, "N": [["cac_polvo", 12], ["cacao", 5], ["batido", 40]], "T": [["cac_polvo", 12], ["cacao", 5], ["batido", 40]], "steps": ["Para 9: 40 g de cacahuete en polvo, 15 g de cacao, 120 g de queso batido y edulcorante.", "Forma bolitas y rebózalas en cacao.", "Nevera 1 h."], "note": "", "salsa": null, "tags": ["bd"], "src": "hsn"}, "manzana_asada": {"id": "manzana_asada", "n": "Manzana asada con canela y yogur", "t": "pos", "min": 12, "N": [["manzana", 1], ["griego", 80]], "T": [["manzana", 1.0], ["griego", 80]], "steps": ["Manzana en gajos con canela: microondas 4 min o airfryer 180 °C 10 min.", "Con yogur griego por encima."], "note": "", "salsa": null, "tags": ["bd"], "src": "dap"}, "bark": {"id": "bark", "n": "Frozen yogurt de frutos rojos y chocolate", "t": "pos", "min": 10, "N": [["griego", 120], ["frutos_rojos", 50], ["choco", 5]], "T": [["griego", 120], ["frutos_rojos", 50], ["choco", 5]], "steps": ["Extiende el yogur con edulcorante en papel de horno.", "Frutos rojos y chocolate rallado por encima.", "Congela 2 h y parte en trozos."], "note": "", "salsa": null, "tags": ["bd"], "src": "vitonica"}, "bizcocho_taza": {"id": "bizcocho_taza", "n": "Bizcocho de taza de plátano", "t": "pos", "min": 4, "N": [["avena", 20], ["platano", 0.5], ["claras", 50], ["cacao", 3]], "T": [["avena", 20], ["platano", 0.5], ["claras", 50], ["cacao", 3]], "steps": ["Aplasta el plátano, mezcla con avena, claras, canela y levadura.", "Microondas 90 s."], "note": "", "salsa": null, "tags": ["bd"], "src": "redes"}}, "weeks": [{"n": "Semana A", "plan": [{"d": "Lunes", "train": true, "N": ["des_n", "teriyaki", "pre", "ensalada"], "T": ["des_t", "cole", "yogur_fibra", "ensalada"]}, {"d": "Martes", "train": true, "N": ["des_n", "curry", "pre", "wraps"], "T": ["des_t", "cole", "yogur_fibra", "wraps"]}, {"d": "Miércoles", "train": false, "N": ["des_n", "teriyaki", "mousse_n", "tortilla", "choco_n"], "T": ["des_t", "cole", "yogur_fibra_sc", "tortilla"]}, {"d": "Jueves", "train": true, "N": ["des_n", "salmon", "pre", "merluza", "tarta"], "T": ["des_t", "salmon", "yogur_fibra", "merluza", "tarta", "fruta"]}, {"d": "Viernes", "train": true, "N": ["des_n", "tacos", "pre", "pizza"], "T": ["des_t", "tacos", "yogur_fibra", "pizza", "tarta", "fruta"]}, {"d": "Sábado", "train": null, "N": ["des_n", "burger", "mousse_n", "libre"], "T": ["des_t", "burger", "yogur_fibra", "libre"]}, {"d": "Domingo", "train": false, "N": ["des_n", "arroz", "mousse_n", "poke", "choco_n"], "T": ["des_t", "arroz", "yogur_fibra", "poke", "mousse_t"]}]}, {"n": "Semana B", "plan": [{"d": "Lunes", "train": true, "N": ["des_n", "burrito_bowl", "pre", "tortilla_patata"], "T": ["des_t", "cole", "yogur_fibra", "tortilla_patata"]}, {"d": "Martes", "train": true, "N": ["des_n", "albondigas", "pre", "quesadilla"], "T": ["des_t", "cole", "yogur_fibra", "quesadilla"]}, {"d": "Miércoles", "train": false, "N": ["des_n", "burrito_bowl", "mousse_n", "cesar", "choco_n"], "T": ["des_t", "cole", "yogur_fibra_sc", "cesar"]}, {"d": "Jueves", "train": true, "N": ["des_n", "salmon_teri", "pre", "bacalao_tomate", "natillas"], "T": ["des_t", "salmon_teri", "yogur_fibra", "bacalao_tomate", "natillas"]}, {"d": "Viernes", "train": true, "N": ["des_n", "fajitas", "pre", "huevos_rotos"], "T": ["des_t", "fajitas", "yogur_fibra", "huevos_rotos", "fruta", "bark"]}, {"d": "Sábado", "train": null, "N": ["des_n", "chili", "mousse_n", "libre"], "T": ["des_t", "chili", "yogur_fibra", "libre"]}, {"d": "Domingo", "train": false, "N": ["des_n", "contramuslo_boniato", "mousse_n", "patata_atun", "choco_n"], "T": ["des_t", "contramuslo_boniato", "yogur_fibra", "patata_atun", "manzana_asada"]}]}, {"n": "Semana C", "plan": [{"d": "Lunes", "train": true, "N": ["des_n", "kebab_bowl", "pre", "shakshuka"], "T": ["des_t", "cole", "yogur_fibra", "shakshuka"]}, {"d": "Martes", "train": true, "N": ["des_n", "pasta_bolo", "pre", "egg_wrap"], "T": ["des_t", "cole", "yogur_fibra", "egg_wrap"]}, {"d": "Miércoles", "train": false, "N": ["des_n", "kebab_bowl", "mousse_n", "pechuga_rellena", "choco_n"], "T": ["des_t", "cole", "yogur_fibra_sc", "pechuga_rellena"]}, {"d": "Jueves", "train": true, "N": ["des_n", "merluza_papillote", "pre", "ens_templada", "galletas"], "T": ["des_t", "merluza_papillote", "yogur_fibra", "ens_templada", "galletas", "manzana_asada"]}, {"d": "Viernes", "train": true, "N": ["des_n", "smash_tacos", "pre", "langostinos_ajillo"], "T": ["des_t", "smash_tacos", "yogur_fibra", "langostinos_ajillo", "fruta"]}, {"d": "Sábado", "train": null, "N": ["des_n", "pim_rellenos", "mousse_n", "libre"], "T": ["des_t", "pim_rellenos", "yogur_fibra", "libre"]}, {"d": "Domingo", "train": false, "N": ["des_n", "ternera_wok", "mousse_n", "boniato_bbq", "choco_n"], "T": ["des_t", "ternera_wok", "yogur_fibra", "boniato_bbq", "trufas", "fruta"]}]}], "cole": {"id": "cole", "n": "Almuerzo en el cole", "t": "alm", "fixed": [650, 30, 75, 22, 8]}, "libre": {"id": "libre", "n": "Cena libre", "t": "cen"}, "target": {"N": {"train": [1950, 150, 200, 60, 30], "rest": [1850, 150, 175, 60, 30]}, "T": {"train": [1550, 110, 160, 50, 30], "rest": [1450, 110, 135, 50, 30]}}, "salsas": [{"n": "Yogur, lima y ajo", "i": "150 g yogur griego ligero + 50 g queso batido, zumo de ½ limón, ½ cdta ajo granulado, comino, sal", "c": "Tacos, wraps, pollo", "k": "s_lima"}, {"n": "Yogur y eneldo", "i": "150 g yogur griego ligero + 50 g queso batido, ralladura y zumo de ½ limón, 1 cdta eneldo, sal y pimienta", "c": "Salmón, merluza, patatas", "k": "s_eneldo"}, {"n": "Salsa verde de yogur", "i": "150 g yogur griego ligero + 50 g queso batido, 1 cda perejil, ½ diente de ajo, zumo de ½ limón, sal", "c": "Merluza, patatas", "k": "s_verde"}, {"n": "Burger fit", "i": "150 g queso batido, 1 cda mostaza, 1 cda tomate frito sin azúcar, 2 pepinillos picados, pimentón, ajo, sal", "c": "Burger, wraps, patatas gajo", "k": "s_burger"}, {"n": "Sriracha fit", "i": "150 g yogur griego ligero, 1 cdta pimentón picante + ½ ahumado, ajo, zumo de limón, sal", "c": "Poke, pollo, huevos", "k": "s_sriracha"}, {"n": "Miel y mostaza", "i": "150 g queso batido, 1 cda mostaza de Dijon, 1 cdta miel, ½ cdta curry, sal", "c": "Ensaladas, pollo, wraps", "k": "s_mostaza"}, {"n": "Teriyaki casera", "i": "4 cda soja + 2 cdta miel + ½ cdta ajo granulado + 4 cda agua (+ 1 cdta maicena para espesar)", "c": "Pollo, arroz, langostinos", "k": "teriyaki"}, {"n": "Guacamole proteico", "i": "1 aguacate + 100 g queso batido, ½ tomate y ¼ cebolla picados, limón, sal", "c": "Tacos, poke, tostadas", "k": "guaca"}], "prods": {"3682": {"id": "3682", "n": "Pechugas enteras familiar de pollo", "f": "Bandeja 1,09 kg", "p": 6.76, "s": "Carne", "sz": 1090, "url": "https://tienda.mercadona.es/product/3682/"}, "2789": {"id": "2789", "n": "Contramuslos de pollo deshuesados y sin piel", "f": "Bandeja 0,62 kg", "p": 4.22, "s": "Carne", "sz": 620, "url": "https://tienda.mercadona.es/product/2789/"}, "2900": {"id": "2900", "n": "Filetes de vacuno añojo para plancha", "f": "Bandeja 0,55 kg", "p": 10.01, "s": "Carne", "sz": 550, "url": "https://tienda.mercadona.es/product/2900/"}, "52776": {"id": "52776", "n": "Preparado de carne picada vacuno", "f": "Paquete 0,4 kg", "p": 5.4, "s": "Carne", "sz": 400, "url": "https://tienda.mercadona.es/product/52776/"}, "53445": {"id": "53445", "n": "Salmón ahumado Hacendado", "f": "Pack-2 0,3 kg", "p": 10.8, "s": "Marisco y pescado", "sz": 300, "url": "https://tienda.mercadona.es/product/53445/"}, "53444": {"id": "53444", "n": "Salmón ahumado Hacendado", "f": "Paquete 0,1 kg", "p": 3.7, "s": "Marisco y pescado", "sz": 100, "url": "https://tienda.mercadona.es/product/53444/"}, "24511": {"id": "24511", "n": "Lomos de salmón sin piel Hacendado congelado", "f": "Paquete 0,25 kg", "p": 5.95, "s": "Marisco y pescado", "sz": 250, "url": "https://tienda.mercadona.es/product/24511/"}, "62112": {"id": "62112", "n": "Lomos de merluza del Cabo Hacendado ultracongelados", "f": "Caja 0,4 kg", "p": 4.9, "s": "Marisco y pescado", "sz": 400, "url": "https://tienda.mercadona.es/product/62112/"}, "62049": {"id": "62049", "n": "Porciones de bacalao sin piel MareDeus ultracongeladas", "f": "Paquete ~0,4 kg", "p": 7.7, "s": "Marisco y pescado", "sz": 400, "url": "https://tienda.mercadona.es/product/62049/"}, "24486": {"id": "24486", "n": "Langostino crudo y pelado Hacendado ultracongelado", "f": "Bandeja ~0,3 kg", "p": 3.95, "s": "Marisco y pescado", "sz": 280, "url": "https://tienda.mercadona.es/product/24486/"}, "67972": {"id": "67972", "n": "Pechuga de pavo Hacendado finas lonchas", "f": "Pack-2 0,4 kg", "p": 3.95, "s": "Charcutería y quesos", "sz": 400, "url": "https://tienda.mercadona.es/product/67972/"}, "17775": {"id": "17775", "n": "Pechuga de pavo Hacendado finas lonchas", "f": "Paquete 0,225 kg", "p": 2.3, "s": "Charcutería y quesos", "sz": 225, "url": "https://tienda.mercadona.es/product/17775/"}, "15628": {"id": "15628", "n": "Jamón serrano gran reserva Hacendado sin aditivos lonchas", "f": "Paquete 0,09 kg", "p": 2.4, "s": "Charcutería y quesos", "sz": 90, "url": "https://tienda.mercadona.es/product/15628/"}, "51071": {"id": "51071", "n": "Queso fresco batido desnatado 0% MG Hacendado", "f": "Tarrina 0,5 kg", "p": 1.1, "s": "Charcutería y quesos", "sz": 500, "url": "https://tienda.mercadona.es/product/51071/"}, "51074": {"id": "51074", "n": "Queso fresco Burgos desnatado 0% MG de vaca Hacendado", "f": "0,375 kg", "p": 1.7, "s": "Charcutería y quesos", "sz": 375, "url": "https://tienda.mercadona.es/product/51074/"}, "60963": {"id": "60963", "n": "Queso fresco cottage semidesnatado de vaca Hacendado", "f": "Tarrina 0,2 kg", "p": 1.35, "s": "Charcutería y quesos", "sz": 200, "url": "https://tienda.mercadona.es/product/60963/"}, "51230": {"id": "51230", "n": "Mozzarella fresca light de vaca Hacendado", "f": "Paquete 0,25 kg", "p": 0.9, "s": "Charcutería y quesos", "sz": 250, "url": "https://tienda.mercadona.es/product/51230/"}, "30167": {"id": "30167", "n": "Huevos", "f": "Paquete 24 ud", "p": 5.25, "s": "Huevos, leche y mantequilla", "sz": 24, "url": "https://tienda.mercadona.es/product/30167/"}, "31540": {"id": "31540", "n": "Huevos grandes L", "f": "Paquete 6 ud", "p": 1.8, "s": "Huevos, leche y mantequilla", "sz": 6, "url": "https://tienda.mercadona.es/product/31540/"}, "31312": {"id": "31312", "n": "Claras de huevo líquidas pasteurizadas", "f": "Botella 1 l", "p": 2.75, "s": "Huevos, leche y mantequilla", "sz": 1000, "url": "https://tienda.mercadona.es/product/31312/"}, "31309": {"id": "31309", "n": "Claras de huevo líquidas pasteurizadas", "f": "Botella 0,3 l", "p": 1.7, "s": "Huevos, leche y mantequilla", "sz": 300, "url": "https://tienda.mercadona.es/product/31309/"}, "10678": {"id": "10678", "n": "Leche desnatada +Proteínas & calcio", "f": "Brik 1 l", "p": 1.35, "s": "Huevos, leche y mantequilla", "sz": 1000, "url": "https://tienda.mercadona.es/product/10678/"}, "21358": {"id": "21358", "n": "Yogur griego natural ligero Hacendado 2% MG", "f": "Bote 1 kg", "p": 2.1, "s": "Postres y yogures", "sz": 1000, "url": "https://tienda.mercadona.es/product/21358/"}, "83886": {"id": "83886", "n": "Pan de molde 100% integral familiar Hacendado", "f": "Paquete 0,82 kg", "p": 1.15, "s": "Panadería y pastelería", "sz": 820, "url": "https://tienda.mercadona.es/product/83886/"}, "82328": {"id": "82328", "n": "Pan de molde 100% integral Hacendado", "f": "Paquete 0,46 kg", "p": 0.9, "s": "Panadería y pastelería", "sz": 460, "url": "https://tienda.mercadona.es/product/82328/"}, "80942": {"id": "80942", "n": "Tortillas de trigo integrales Hacendado", "f": "Paquete 0,36 kg", "p": 1.55, "s": "Panadería y pastelería", "sz": 360, "url": "https://tienda.mercadona.es/product/80942/"}, "22388": {"id": "22388", "n": "6 Panecillos integrales 100%", "f": "Bolsa 0,27 kg", "p": 1.05, "s": "Panadería y pastelería", "sz": 270, "url": "https://tienda.mercadona.es/product/22388/"}, "69975": {"id": "69975", "n": "Tomates pera", "f": "Malla 1,13 kg", "p": 2.6, "s": "Fruta y verdura", "sz": 1130, "url": "https://tienda.mercadona.es/product/69975/"}, "69990": {"id": "69990", "n": "Tomates cherry", "f": "Bandeja 0,5 kg", "p": 2.2, "s": "Fruta y verdura", "sz": 500, "url": "https://tienda.mercadona.es/product/69990/"}, "69121": {"id": "69121", "n": "Lechugas corazón romana", "f": "2 ud", "p": 1.85, "s": "Fruta y verdura", "sz": 400, "url": "https://tienda.mercadona.es/product/69121/"}, "69706": {"id": "69706", "n": "Ensalada mezcla 4 estaciones lavada", "f": "Paquete 0,25 kg", "p": 0.85, "s": "Fruta y verdura", "sz": 250, "url": "https://tienda.mercadona.es/product/69706/"}, "69984": {"id": "69984", "n": "Espinacas baby lavadas", "f": "Paquete 0,1 kg", "p": 1.15, "s": "Fruta y verdura", "sz": 100, "url": "https://tienda.mercadona.es/product/69984/"}, "69495": {"id": "69495", "n": "Pimientos tricolor", "f": "0,72 kg", "p": 2.23, "s": "Fruta y verdura", "sz": 720, "url": "https://tienda.mercadona.es/product/69495/"}, "69338": {"id": "69338", "n": "Calabacín verde", "f": "Pieza ~0,42 kg", "p": 0.59, "s": "Fruta y verdura", "sz": 420, "url": "https://tienda.mercadona.es/product/69338/"}, "69669": {"id": "69669", "n": "Zanahorias", "f": "Paquete 0,5 kg", "p": 0.8, "s": "Fruta y verdura", "sz": 500, "url": "https://tienda.mercadona.es/product/69669/"}, "69066": {"id": "69066", "n": "Patata", "f": "Pieza ~0,22 kg", "p": 0.42, "s": "Fruta y verdura", "sz": 220, "url": "https://tienda.mercadona.es/product/69066/"}, "69239": {"id": "69239", "n": "Batata", "f": "Pieza ~0,4 kg", "p": 1.02, "s": "Fruta y verdura", "sz": 400, "url": "https://tienda.mercadona.es/product/69239/"}, "3830": {"id": "3830", "n": "Aguacate", "f": "Pieza ~0,19 kg", "p": 1.06, "s": "Fruta y verdura", "sz": 130, "url": "https://tienda.mercadona.es/product/3830/"}, "3819": {"id": "3819", "n": "Plátano de Canarias IGP", "f": "Pieza", "p": 0.51, "s": "Fruta y verdura", "sz": 1, "url": "https://tienda.mercadona.es/product/3819/"}, "3028": {"id": "3028", "n": "Manzana Golden", "f": "Pieza", "p": 0.42, "s": "Fruta y verdura", "sz": 1, "url": "https://tienda.mercadona.es/product/3028/"}, "3820": {"id": "3820", "n": "Kiwi verde", "f": "Pieza", "p": 0.51, "s": "Fruta y verdura", "sz": 1, "url": "https://tienda.mercadona.es/product/3820/"}, "61261": {"id": "61261", "n": "Brócoli Hacendado ultracongelado", "f": "Paquete 1 kg", "p": 1.8, "s": "Congelados", "sz": 1000, "url": "https://tienda.mercadona.es/product/61261/"}, "61238": {"id": "61238", "n": "Espárrago verde troceado Hacendado ultracongelado", "f": "Paquete 0,3 kg", "p": 2.55, "s": "Congelados", "sz": 300, "url": "https://tienda.mercadona.es/product/61238/"}, "61092": {"id": "61092", "n": "Fresas enteras Hacendado ultracongeladas", "f": "Paquete 0,3 kg", "p": 1.9, "s": "Congelados", "sz": 300, "url": "https://tienda.mercadona.es/product/61092/"}, "61093": {"id": "61093", "n": "Arándanos enteros Hacendado ultracongelados", "f": "Paquete 0,3 kg", "p": 2.25, "s": "Congelados", "sz": 300, "url": "https://tienda.mercadona.es/product/61093/"}, "26029": {"id": "26029", "n": "Garbanzo cocido Hacendado", "f": "Tarro 0,57 kg", "p": 0.8, "s": "Arroz, legumbres y pasta", "sz": 400, "url": "https://tienda.mercadona.es/product/26029/"}, "26030": {"id": "26030", "n": "Lenteja cocida Hacendado", "f": "Tarro 0,57 kg", "p": 0.9, "s": "Arroz, legumbres y pasta", "sz": 400, "url": "https://tienda.mercadona.es/product/26030/"}, "26019": {"id": "26019", "n": "Alubia cocida blanca Hacendado", "f": "Tarro 0,57 kg", "p": 0.75, "s": "Arroz, legumbres y pasta", "sz": 400, "url": "https://tienda.mercadona.es/product/26019/"}, "26000": {"id": "26000", "n": "Alubia cocida roja Hacendado", "f": "Tarro 0,57 kg", "p": 1.2, "s": "Arroz, legumbres y pasta", "sz": 400, "url": "https://tienda.mercadona.es/product/26000/"}, "6106": {"id": "6106", "n": "Pasta fusilli 100% lentejas rojas Felicia", "f": "Paquete 0,25 kg", "p": 1.65, "s": "Arroz, legumbres y pasta", "sz": 250, "url": "https://tienda.mercadona.es/product/6106/"}, "5002": {"id": "5002", "n": "Arroz basmati aromático Hacendado", "f": "Paquete 1 kg", "p": 2.1, "s": "Arroz, legumbres y pasta", "sz": 1000, "url": "https://tienda.mercadona.es/product/5002/"}, "9430": {"id": "9430", "n": "Quinoa Hacendado", "f": "Paquete 0,5 kg", "p": 2.65, "s": "Arroz, legumbres y pasta", "sz": 500, "url": "https://tienda.mercadona.es/product/9430/"}, "18018": {"id": "18018", "n": "Atún claro al natural Hacendado", "f": "0,48 kg (6 latas)", "p": 4.2, "s": "Conservas, caldos y cremas", "sz": 6, "url": "https://tienda.mercadona.es/product/18018/"}, "16618": {"id": "16618", "n": "Champiñones laminados Hacendado", "f": "Bote 0,355 kg", "p": 1.0, "s": "Conservas, caldos y cremas", "sz": 200, "url": "https://tienda.mercadona.es/product/16618/"}, "16807": {"id": "16807", "n": "Avena molida Hacendado", "f": "Paquete 0,5 kg", "p": 1.15, "s": "Cereales y galletas", "sz": 500, "url": "https://tienda.mercadona.es/product/16807/"}, "14013": {"id": "14013", "n": "Tortitas de arroz Hacendado", "f": "Paquete 0,124 kg", "p": 1.1, "s": "Cereales y galletas", "sz": 124, "url": "https://tienda.mercadona.es/product/14013/"}, "17330": {"id": "17330", "n": "Tomate frito sin azúcares añadidos Hacendado", "f": "Tarro 0,56 kg", "p": 1.1, "s": "Aceite, especias y salsas", "sz": 560, "url": "https://tienda.mercadona.es/product/17330/"}, "60722": {"id": "60722", "n": "Chocolate negro 85% cacao Hacendado", "f": "Tableta 0,1 kg", "p": 1.75, "s": "Azúcar, caramelos y chocolate", "sz": 100, "url": "https://tienda.mercadona.es/product/60722/"}, "13738": {"id": "13738", "n": "Cacahuete en polvo desgrasado +Proteínas 14 g 70% reducido en grasa", "f": "Paquete 0,2 kg", "p": 2.75, "s": "Aperitivos", "sz": 200, "url": "https://tienda.mercadona.es/product/13738/"}, "34865": {"id": "34865", "n": "Almendra natural Hacendado", "f": "Paquete 0,2 kg", "p": 2.3, "s": "Aperitivos", "sz": 200, "url": "https://tienda.mercadona.es/product/34865/"}, "69089": {"id": "69089", "n": "Cebollas", "f": "Malla 1 kg", "p": 1.5, "s": "Fruta y verdura", "sz": 1000, "url": "https://tienda.mercadona.es/product/69089/"}, "P3236": {"id": "P3236", "n": "Limones", "f": "Malla 1 kg", "p": 2.3, "s": "Fruta y verdura", "sz": 0, "url": "https://tienda.mercadona.es/product/3236/", "pantry": 1}, "P4740": {"id": "P4740", "n": "Aceite de oliva virgen extra Hacendado", "f": "Botella 1 l", "p": 4.35, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/4740/", "pantry": 1}, "P18586": {"id": "P18586", "n": "Aceite de oliva virgen extra Hacendado", "f": "Spray 0,4 l", "p": 4.25, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/18586/", "pantry": 1}, "P17360": {"id": "P17360", "n": "Salsa de Soja Hacendado", "f": "Botella 0,25 l", "p": 1.2, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/17360/", "pantry": 1}, "P17228": {"id": "P17228", "n": "Mostaza de Dijon Hacendado", "f": "Tarro 0,2 kg", "p": 1.25, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/17228/", "pantry": 1}, "P11565": {"id": "P11565", "n": "Pepinillos en vinagre Hacendado", "f": "Tarro 0,42 kg", "p": 1.45, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/11565/", "pantry": 1}, "P34125": {"id": "P34125", "n": "Curry Hacendado", "f": "Bote 0,057 kg", "p": 1.1, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/34125/", "pantry": 1}, "P34102": {"id": "P34102", "n": "Pimentón dulce de la Vera Hacendado", "f": "Bote 0,075 kg", "p": 1.85, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/34102/", "pantry": 1}, "P34183": {"id": "P34183", "n": "Pimentón picante Hacendado", "f": "Bote 0,06 kg", "p": 1.35, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/34183/", "pantry": 1}, "P52739": {"id": "P52739", "n": "Eneldo Hacendado", "f": "Bote 0,018 kg", "p": 1.85, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/52739/", "pantry": 1}, "P5599": {"id": "P5599", "n": "Perejil Hacendado", "f": "Bote 0,018 kg", "p": 1.0, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/5599/", "pantry": 1}, "P86656": {"id": "P86656", "n": "Ajo granulado Hacendado", "f": "Bote 0,115 kg", "p": 1.25, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/86656/", "pantry": 1}, "P34120": {"id": "P34120", "n": "Comino molido Hacendado", "f": "Bote 0,058 kg", "p": 1.15, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/34120/", "pantry": 1}, "P5598": {"id": "P5598", "n": "Orégano Hacendado", "f": "Bote 0,025 kg", "p": 1.0, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/5598/", "pantry": 1}, "P34177": {"id": "P34177", "n": "Canela molida Hacendado", "f": "Bote 0,052 kg", "p": 1.0, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/34177/", "pantry": 1}, "P16883": {"id": "P16883", "n": "Crema de cacahuete 100% Hacendado", "f": "Tarro 0,5 kg", "p": 2.65, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/16883/", "pantry": 1}, "P24561": {"id": "P24561", "n": "Semillas de chía Hacendado", "f": "Paquete 0,25 kg", "p": 2.05, "s": "Aceite, especias y salsas", "sz": 0, "url": "https://tienda.mercadona.es/product/24561/", "pantry": 1}, "P15430": {"id": "P15430", "n": "Miel de flores Hacendado", "f": "Bote 0,5 kg", "p": 3.2, "s": "Azúcar, caramelos y chocolate", "sz": 0, "url": "https://tienda.mercadona.es/product/15430/", "pantry": 1}, "P19820": {"id": "P19820", "n": "Edulcorante líquido stevia Hacendado", "f": "Bote 0,15 l", "p": 2.05, "s": "Azúcar, caramelos y chocolate", "sz": 0, "url": "https://tienda.mercadona.es/product/19820/", "pantry": 1}, "P22580": {"id": "P22580", "n": "Cacao puro en polvo La Chocolatera", "f": "Bote 0,265 kg", "p": 4.4, "s": "Cacao, café e infusiones", "sz": 0, "url": "https://tienda.mercadona.es/product/22580/", "pantry": 1}, "Xwhey": {"id": "Xwhey", "n": "Proteína whey (chocolate o neutra)", "f": "~1 kg", "p": 0, "s": "Fuera de Mercadona", "sz": 0, "url": "", "pantry": 1}, "Xmaicena": {"id": "Xmaicena", "n": "Maicena", "f": "Cualquier marca", "p": 0, "s": "Cereales y galletas", "sz": 0, "url": "", "pantry": 1}}, "fmap": {"pollo": ["3682"], "contramuslo": ["2789"], "ternera": ["2900"], "picada": ["52776"], "salmon_ah": ["53445", "53444"], "salmon": ["24511"], "merluza": ["62112"], "bacalao": ["62049"], "langostino": ["24486"], "pavo": ["67972", "17775"], "jamon": ["15628"], "batido": ["51071"], "burgos": ["51074"], "cottage": ["60963"], "mozz": ["51230"], "huevo": ["30167", "31540"], "claras": ["31312", "31309"], "leche_prot": ["10678"], "griego": ["21358"], "pan": ["83886", "82328"], "tortilla": ["80942"], "panecillo": ["22388"], "tomate": ["69975"], "cherry": ["69990"], "lechuga": ["69121", "69706"], "espinaca": ["69984"], "pimiento": ["69495"], "calabacin": ["69338"], "zanahoria": ["69669"], "patata": ["69066"], "boniato": ["69239"], "aguacate": ["3830"], "platano": ["3819"], "manzana": ["3028"], "kiwi": ["3820"], "cebolla": ["69089"], "brocoli": ["61261"], "esparrago": ["61238"], "fresas_c": ["61092"], "arandanos_c": ["61093"], "garbanzo": ["26029"], "lenteja": ["26030"], "alubia_b": ["26019"], "alubia_r": ["26000"], "pasta_len": ["6106"], "arroz": ["5002"], "quinoa": ["9430"], "atun": ["18018"], "champi": ["16618"], "avena": ["16807"], "tortita": ["14013"], "tomate_frito": ["17330"], "choco": ["60722"], "cac_polvo": ["13738"], "almendra": ["34865"], "aove": ["P4740"], "soja": ["P17360"], "miel": ["P15430"], "cacahuete": ["P16883"], "chia": ["P24561"], "cacao": ["P22580"], "whey": ["Xwhey"], "maicena": ["Xmaicena"]}, "unitf": ["huevo", "atun", "platano", "manzana", "kiwi"], "split": {"s_yogur": {"griego": 0.75, "batido": 0.25}, "s_burger": {"batido": 0.85, "P17228": 0, "P11565": 0}, "s_mostaza": {"batido": 0.9, "P17228": 0, "miel": 0.05}, "s_sriracha": {"griego": 1.0, "P34183": 0}, "teriyaki": {"soja": 0.45, "miel": 0.11}, "frutos_rojos": {"fresas_c": 0.5, "arandanos_c": 0.5}}, "src": {"vitonica": {"n": "Vitónica · recetas fitness", "u": "https://www.vitonica.com/recetas-saludables/23-recetas-postres-fitness-bajas-calorias-para-incluir-tu-dieta"}, "fitia": {"n": "Fitia · recetas altas en proteína", "u": "https://fitia.app/es/aprende/articulo/5-recetas-altas-en-proteinas-y-bajas-en-calorias/"}, "dap": {"n": "Directo al Paladar", "u": "https://www.directoalpaladar.com/postres/postre-facil-rico-yogur-azucar-puedes-hacer-solo-cuatro-ingredientes"}, "hsn": {"n": "HSN · recetas proteicas", "u": "https://www.hsnstore.com/blog/recetas-fitness/proteicas/helado-de-donut-con-cacahuete-y-chocolate/"}, "redes": {"n": "Tendencia en redes (TikTok/Instagram fit)", "u": "https://www.moncloa.com/2026/02/18/recetas-cenas-virales-dieta-3361641/"}}, "start": "2026-11-09", "hid": "nt-7f7937aa941e"};
+const CFG = window.APP_CONFIG || {};
+const MEALS=[{k:'des',n:'Desayuno',h:'7:30–9:00'},{k:'alm',n:'Almuerzo',h:'13:30–15:00'},{k:'mer',n:'Merienda',h:'17:00–18:30'},{k:'cen',n:'Cena',h:'20:30–21:30'},{k:'pos',n:'Postre',h:'Opcional'}];
+const MC={des:'--des',alm:'--alm',mer:'--mer',cen:'--cen',pos:'--pos'};
+const TYPEN={des:'Desayuno',alm:'Almuerzo',mer:'Merienda',cen:'Cena',pos:'Postre'};
+const TYPEP={des:'Desayunos',alm:'Almuerzos',cen:'Cenas',mer:'Meriendas',pos:'Postres'};
+const WHO={N:{n:'Nacho',c:'--nacho'},T:{n:'Teresa',c:'--teresa'}};
+const MACN=['kcal','Proteína','Hidratos','Grasa','Fibra'];
+const START=new Date(D.start+'T00:00:00');
+const DOW=['L','M','X','J','V','S','D'];
+const DIAS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MESL=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const FROZEN={salmon:'el salmón',merluza:'la merluza',bacalao:'el bacalao',langostino:'los langostinos'};
+
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const S={who:store.get('pnt-who','both'),week:0,day:0,done:store.get('pnt-done2',{}),got:store.get('pnt-got2',{}),have:store.get('pnt-have',{}),swaps:store.get('pnt-swaps',{}),
+  cfg:store.get('pnt-cfg',{days:10,from:null}),hideGot:store.get('pnt-hide',false),q:'',ft:'all',view:'hoy'};
+
+/* ---------- SYNC ---------- */
+let remote=null;
+function setSync(st,txt){const el=document.getElementById('sync');el.className='sync '+st;el.querySelector('span').textContent=txt}
+function loadScript(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+async function initSync(){
+  if(!CFG.firebase)return;
+  setSync('', 'Conectando…');
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js');
+    firebase.initializeApp(CFG.firebase);
+    const db=firebase.firestore();
+    remote=db.collection('hogares').doc(CFG.hogar||D.hid);
+    remote.onSnapshot(snap=>{const d=snap.data()||{};['done','got','have','swaps'].forEach(k=>S[k]=d[k]||{});setSync('ok','Sincronizado');rerender()},
+      err=>{setSync('err','Sin conexión');console.warn(err)});
+  }catch(e){setSync('err','Sin conexión');console.warn(e)}
+}
+function put(field,key,val){
+  if(val==null)delete S[field][key];else S[field][key]=val;
+  if(remote){remote.set({[field]:{[key]:val==null?firebase.firestore.FieldValue.delete():val}},{merge:true}).catch(e=>setSync('err','Error al guardar'))}
+  else store.set({done:'pnt-done2',got:'pnt-got2',have:'pnt-have',swaps:'pnt-swaps'}[field],S[field]);
+}
+function clearField(field){
+  S[field]={};
+  if(remote){remote.update({[field]:{}}).catch(()=>remote.set({[field]:{}},{merge:true}))}
+  else store.set({got:'pnt-got2'}[field]||'pnt-'+field,{});
+}
+
+/* ---------- MODEL ---------- */
+const fmt=(n,d=0)=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
+const eur=n=>Number(n).toLocaleString('es-ES',{style:'currency',currency:'EUR'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function parse(s){return new Date(s+'T00:00:00')}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function today(){const t=new Date();t.setHours(0,0,0,0);return t}
+function wd(d){return (d.getDay()+6)%7}
+function diffDays(a,b){return Math.round((a-b)/86400000)}
+function rotOf(d){const k=Math.floor(diffDays(d,START)/7);return ((k%3)+3)%3}
+function dayPlan(d){return D.weeks[rotOf(d)].plan[wd(d)]}
+function whoList(){return S.who==='both'?['N','T']:[S.who]}
+function mealsFor(d,who){const k=iso(d);return dayPlan(d)[who].map((rid,pos)=>({pos,rid:S.swaps[k+'|'+who+'|'+pos]||rid,orig:rid,slot:Math.min(pos,4)}))}
+function grams(f,a){const x=D.foods[f];return a*(x.g||1)}
+function mac(f,a){const g=grams(f,a);return D.foods[f].m.map(v=>v*g/100)}
+function recMac(id,who){
+  if(id==='cole')return D.cole.fixed.slice();
+  if(id==='libre')return [0,0,0,0,0];
+  const r=D.rec[id];const ing=r&&r[who];if(!ing)return null;
+  return ing.reduce((t,[f,a])=>{const m=mac(f,a);return t.map((v,i)=>v+m[i])},[0,0,0,0,0]);
+}
+function recName(id){return id==='cole'?D.cole.n:id==='libre'?D.libre.n:D.rec[id].n}
+function recType(id){return id==='cole'?'alm':id==='libre'?'cen':D.rec[id].t}
+function dayTotal(d,who,onlyDone){return mealsFor(d,who).reduce((t,m)=>{if(onlyDone&&!isDone(d,who,m.pos))return t;const x=recMac(m.rid,who)||[0,0,0,0,0];return t.map((v,i)=>v+x[i])},[0,0,0,0,0])}
+function target(d,who){const tr=dayPlan(d).train;return D.target[who][tr===true?'train':'rest']}
+function pctColor(p){return p>1.06?'var(--bad)':(p<.9?'var(--warn)':'var(--ok)')}
+function doneKey(d,who,pos){return iso(d)+'|'+who+'|'+pos}
+function isDone(d,who,pos){return !!S.done[doneKey(d,who,pos)]}
+function trainTag(tr){return tr===true?'<span class="tag train">Entreno</span>':tr===null?'<span class="tag opt">Entreno opcional</span>':'<span class="tag rest">Descanso</span>'}
+function weekStart(w){return addDays(START,w*7)}
+function fdate(d){return `${d.getDate()} ${MES[d.getMonth()]}`}
+
+/* registry for clickable meals */
+let REG=[];
+function reg(o){REG.push(o);return REG.length-1}
+
+/* ---------- HOY ---------- */
+function renderHoy(){
+  const v=document.getElementById('v-hoy');REG=[];
+  const t=today();const before=t<START;const d=before?START:t;
+  const dp=dayPlan(d);const hr=new Date().getHours()+new Date().getMinutes()/60;
+  const nowSlot=before?0:hr<10.5?0:hr<15.5?1:hr<19?2:3;
+  let h=`<div class="hoyhead"><div><span class="note">${before?'El plan empieza el lunes. Esto es lo que toca ese día':'Hoy'}</span><h2>${DIAS[wd(d)]} ${d.getDate()} de ${MESL[d.getMonth()]}</h2></div><div class="sub">${trainTag(dp.train)}<span class="tag rot">${D.weeks[rotOf(d)].n}</span></div></div>`;
+  // ahora toca
+  const nowItems=whoList().map(w=>mealsFor(d,w).find(m=>m.slot===nowSlot)).filter(Boolean);
+  if(nowItems.length){const rid=nowItems[0].rid;const t2=recType(rid);
+    const items=whoList().map(w=>({w,m:mealsFor(d,w).find(m=>m.slot===nowSlot&&m.rid===rid)})).filter(x=>x.m);
+    const i=reg({rid,d,items:items.map(x=>({who:x.w,pos:x.m.pos}))});
+    h+=`<div class="now" style="--c:var(${MC[t2]})"><div><span class="lab">${before?'Primera comida':'Ahora toca'} · ${MEALS[nowSlot].n}</span><b>${esc(recName(rid))}</b></div><span></span><div class="sh-actions">${rid!=='cole'&&rid!=='libre'?`<button class="btn primary" data-cook="${i}">Modo cocina</button>`:''}<button class="btn" data-open="${i}">Ver receta</button></div></div>`;}
+  // columnas por persona
+  h+=`<div class="hoycols">${whoList().map(w=>{
+    const ms=mealsFor(d,w);const dn=ms.filter(m=>m.rid!=='libre'&&isDone(d,w,m.pos)).length;const tot=ms.filter(m=>m.rid!=='libre').length;
+    const eaten=dayTotal(d,w,true),tg=target(d,w);
+    return `<div class="hcol" style="--pc:var(${WHO[w].c})"><header><i class="dot" style="background:var(${WHO[w].c})"></i><h3>${WHO[w].n}</h3><span class="p">${dn}/${tot} · ${fmt(eaten[0])} / ${fmt(tg[0])} kcal</span></header>
+    <span class="meter"><i style="width:${Math.min(100,eaten[0]/tg[0]*100)}%;background:var(${WHO[w].c})"></i></span>
+    ${ms.map(m=>{const t3=recType(m.rid);const x=recMac(m.rid,w);const i=reg({rid:m.rid,d,items:[{who:w,pos:m.pos}]});const dn2=isDone(d,w,m.pos);
+      return `<div class="hrow" style="--c:var(${MC[t3]})"><span class="bar4"></span><button class="tx" data-open="${i}"><small>${MEALS[m.slot].n}</small><span>${esc(recName(m.rid))}</span><em>${m.rid==='libre'?'Sin contar':fmt(x[0])+' kcal · '+fmt(x[1])+' g P'}</em></button>${m.rid==='libre'?'':`<button class="check" data-done="${doneKey(d,w,m.pos)}" aria-pressed="${dn2}" aria-label="Hecho">✓</button>`}</div>`}).join('')}</div>`}).join('')}</div>`;
+  // tareas
+  const tasks=tasksFor(d);
+  if(tasks.length)h+=`<div class="panel"><h3>Para hoy</h3><div class="tasks">${tasks.map(x=>`<div class="task" style="--c:var(${x.c})"><span class="ti">${x.i}</span><p>${x.t}</p></div>`).join('')}</div></div>`;
+  h+=weekSummaryHTML(Math.max(0,Math.floor(diffDays(d,START)/7)),'Esta semana');
+  v.innerHTML=h;bindCommon(v);
+}
+function tasksFor(d){
+  const out=[];const tm=addDays(d,1);const ws=['N','T'];
+  const frozen=new Set();ws.forEach(w=>mealsFor(tm,w).forEach(m=>{const r=D.rec[m.rid];if(!r)return;(r[w]||[]).forEach(([f])=>{if(FROZEN[f])frozen.add(FROZEN[f])})}));
+  if(frozen.size)out.push({c:'--cen',i:'❄',t:`<b>Esta noche</b>, pasa ${[...frozen].join(' y ')} del congelador a la nevera para mañana.`});
+  if(dayPlan(d).train===true&&whoList().includes('N'))out.push({c:'--mer',i:'P',t:'<b>Día de entreno:</b> la merienda pre-entreno de Nacho, 1–2 h antes de entrenar.'});
+  if(wd(d)<3&&whoList().includes('T'))out.push({c:'--teresa',i:'T',t:'<b>Teresa come en el cole.</b> Si el menú es muy ligero, 50 g más de proteína en la cena.'});
+  if(wd(d)===6){
+    const nx=[0,1,2].map(i=>mealsFor(addDays(d,1+i),'N')[1]).map(m=>recName(m.rid));
+    out.push({c:'--accent',i:'B',t:`<b>Batch cooking (~75 min):</b> cuece el arroz de la semana, cocina los 3 tuppers de Nacho (${[...new Set(nx)].join(', ')}), 4 huevos cocidos, verdura lavada y cortada, y 2 salsas.`});
+  }
+  if(wd(d)===2)out.push({c:'--pos',i:'S',t:'<b>Miércoles:</b> prepara las salsas del fin de semana y el postre del jueves si lleva preparación.'});
+  const prep=new Set();ws.forEach(w=>mealsFor(tm,w).forEach(m=>{if(['tarta','natillas','galletas','trufas','bark','overnight'].includes(m.rid))prep.add(recName(m.rid))}));
+  if(prep.size)out.push({c:'--pos',i:'★',t:`<b>Prepara hoy para mañana:</b> ${[...prep].join(', ')}.`});
+  return out;
+}
+function weekSummaryHTML(w,title){
+  const ws=weekStart(w);const t=today();
+  return `<div class="summary">${whoList().map(who=>{
+    let dn=0,tot=0,full=0,days=0,miss={};const avg=[0,0,0,0,0],ga=[0,0,0,0,0];let n=0;
+    for(let i=0;i<7;i++){const d=addDays(ws,i);if(d>t)continue;days++;const ms=mealsFor(d,who).filter(m=>m.rid!=='libre');let all=true;
+      ms.forEach(m=>{tot++;if(isDone(d,who,m.pos))dn++;else{all=false;miss[MEALS[m.slot].n]=(miss[MEALS[m.slot].n]||0)+1}});if(all&&ms.length)full++;
+      if(wd(d)!==5){const a=dayTotal(d,who,true),g=target(d,who);for(let k=0;k<5;k++){avg[k]+=a[k];ga[k]+=g[k]}n++}}
+    const pct=tot?dn/tot:0;const worst=Object.entries(miss).sort((a,b)=>b[1]-a[1])[0];
+    let msg=!days?'La semana todavía no ha empezado.':pct>=.9?'Semana excelente: así se baja de peso sin perder músculo.':pct>=.75?`Bien. Lo que más se escapa: ${worst?worst[0].toLowerCase():'—'}.`:`Hay que apretar: ${worst?worst[0].toLowerCase()+' es lo que más falla':'marcad lo que coméis'}. Preparadlo con antelación.`;
+    return `<div class="who-card"><header><i class="dot" style="background:var(${WHO[who].c})"></i><h3>${WHO[who].n} · ${title}</h3><span class="sub">${days} de 7 días</span></header>
+    <div class="adh"><b>${fmt(pct*100)}%</b><span>comidas cumplidas · ${full} días completos</span></div>
+    <span class="meter"><i style="width:${pct*100}%;background:${pct>=.9?'var(--ok)':pct>=.75?'var(--warn)':'var(--bad)'}"></i></span>
+    ${n?`<div class="metrics">${MACN.map((nm,k)=>{const a=avg[k]/n,g=ga[k]/n,p=a/g;return `<div class="metric"><span class="lab">${nm}</span><span class="val">${fmt(a)}<small>${k?' g':''} / ${fmt(g)}</small></span><span class="meter"><i style="width:${Math.min(100,p*100)}%;background:${k===4?(p>=1?'var(--ok)':'var(--warn)'):pctColor(p)}"></i></span></div>`}).join('')}</div><p class="note">Media diaria de lo marcado como hecho (sin sábados).</p>`:''}
+    <p class="msg">${msg}</p></div>`}).join('')}</div>`;
+}
+
+/* ---------- PLAN ---------- */
+function renderPlan(){
+  const v=document.getElementById('v-plan');REG=[];
+  const ws=weekStart(S.week),we=addDays(ws,6);const tIso=iso(today());
+  let h=`<div class="bar"><div class="weeknav"><button class="iconbtn" id="wprev" aria-label="Semana anterior">‹</button><button class="iconbtn" id="wnext" aria-label="Semana siguiente">›</button>
+    <h2>${fdate(ws)} – ${fdate(we)} ${we.getFullYear()}</h2><span class="tag rot">${D.weeks[rotOf(ws)].n}</span></div><span class="spacer"></span><button class="pill" id="wtoday">Esta semana</button></div>`;
+  h+=weekSummaryHTML(S.week,'semana');
+  h+=`<div class="legend">${MEALS.map(m=>`<span><i class="sw" style="background:var(${MC[m.k]})"></i>${m.n}</span>`).join('')}<span>Toca una comida para ver gramos y macros, cambiarla o cocinarla</span></div>`;
+  h+=`<div class="calwrap"><div class="cal"><div class="rowhead"></div>`;
+  for(let i=0;i<7;i++){const d=addDays(ws,i);h+=`<div class="dayhead${iso(d)===tIso?' today':''}"><span class="dn">${DIAS[i]}</span><span class="dd">${fdate(d)}</span>${trainTag(dayPlan(d).train)}</div>`}
+  MEALS.forEach((m,s)=>{h+=`<div class="rowhead"><b style="color:var(${MC[m.k]})">${m.n}</b><span>${m.h}</span></div>`;for(let i=0;i<7;i++)h+=`<div class="cell">${cellHTML(addDays(ws,i),s)}</div>`});
+  h+=`<div class="rowhead"><b>Total del día</b><span>vs objetivo</span></div>`;
+  for(let i=0;i<7;i++)h+=`<div class="totals">${whoList().map(w=>totLine(addDays(ws,i),w)).join('')}</div>`;
+  h+=`</div></div>`;
+  h+=`<div class="daypick">${[0,1,2,3,4,5,6].map(i=>`<button data-day="${i}" aria-pressed="${S.day===i}"><b>${DOW[i]}</b><span>${addDays(ws,i).getDate()}</span></button>`).join('')}</div>`;
+  const dd=addDays(ws,S.day);
+  h+=`<div class="dayview"><div class="dayhead" style="border:1px solid var(--line);border-radius:var(--r)"><span class="dn">${DIAS[S.day]} ${fdate(dd)}</span>${trainTag(dayPlan(dd).train)}</div>${MEALS.map((m,s)=>{const c=cellHTML(dd,s);return c.includes('class="empty"')?'':`<div class="dv-slot"><h4 style="color:var(${MC[m.k]})">${m.n} · ${m.h}</h4>${c}</div>`}).join('')}<div class="totals" style="border:1px solid var(--line);border-radius:var(--r)">${whoList().map(w=>totLine(dd,w)).join('')}</div></div>`;
+  h+=`<div class="two"><div class="panel"><h3>Rotación</h3><p class="note" style="margin-bottom:8px">Tres semanas de menú que se repiten en orden: A, B, C, y vuelta a A. Los desayunos fijos y las meriendas no cambian.</p><ul>${D.weeks.map((w,i)=>`<li><b>${w.n}</b>: ${[...new Set(w.plan.flatMap(p=>[p.N[1],p.N[3]]).filter(x=>x!=='libre'))].slice(0,6).map(recName).join(', ')}…</li>`).join('')}</ul></div>
+  <div class="panel"><h3>Reglas para ser estrictos</h3><ol><li>Pesad en crudo, al menos las 3 primeras semanas. El modo cocina os da el total y el reparto.</li><li>Marcad cada comida al terminarla: el resumen semanal sale de ahí.</li><li>Agua: Nacho 2,5–3 l, Teresa 2–2,5 l. Sal con moderación.</li><li>Sábado noche: cena libre, una comida, sin compensar.</li><li>Si algo no apetece, cambiadlo por otra receta parecida en vez de saltároslo.</li></ol></div></div>`;
+  h+=`<p class="note">El almuerzo de Teresa en el cole (L–X) cuenta como ~650 kcal y ~30 g de proteína. Los macros salen de tablas nutricionales estándar; las etiquetas pueden variar un 5–10%.</p>`;
+  v.innerHTML=h;
+  v.querySelector('#wprev').onclick=()=>{S.week=Math.max(0,S.week-1);renderPlan()};
+  v.querySelector('#wnext').onclick=()=>{S.week++;renderPlan()};
+  v.querySelector('#wtoday').onclick=()=>{goToday();renderPlan()};
+  v.querySelectorAll('.daypick button').forEach(b=>b.onclick=()=>{S.day=+b.dataset.day;renderPlan()});
+  bindCommon(v);
+}
+function goToday(){const df=diffDays(today(),START);if(df>=0){S.week=Math.floor(df/7);S.day=df%7}else{S.week=0;S.day=0}}
+function cellHTML(d,slot){
+  const groups={};whoList().forEach(w=>mealsFor(d,w).filter(m=>m.slot===slot).forEach(m=>{(groups[m.rid]=groups[m.rid]||[]).push({who:w,pos:m.pos,sw:m.rid!==m.orig})}));
+  const ids=Object.keys(groups);if(!ids.length)return '<span class="empty">—</span>';
+  return ids.map(id=>{const items=groups[id];const i=reg({rid:id,d,items:items.map(x=>({who:x.who,pos:x.pos}))});
+    const chips=items.map(x=>{const m=recMac(id,x.who);const dn=isDone(d,x.who,x.pos);return `<span class="chip${dn?' done':''}" title="${WHO[x.who].n}"><i class="k" style="background:${dn?'#fff':`var(${WHO[x.who].c})`}"></i>${dn?'✓ ':''}${id==='libre'?'libre':fmt(m[0])+' kcal · '+fmt(m[1])+' P'}</span>`}).join('');
+    const lab=S.who==='both'&&items.length===1?`<span class="who" style="color:var(${WHO[items[0].who].c})">${WHO[items[0].who].n}</span>`:'';
+    return `<button class="meal${id==='libre'||id==='cole'?' plain':''}" style="--c:var(${MC[recType(id)]})" data-open="${i}">${lab}${items.some(x=>x.sw)?'<span class="sw2">Cambiada</span>':''}<span class="mn">${esc(recName(id))}</span><span class="chips">${chips}</span></button>`}).join('');
+}
+function totLine(d,w){const a=dayTotal(d,w),g=target(d,w);const p=a[0]/g[0];const lib=mealsFor(d,w).some(m=>m.rid==='libre');
+  return `<div class="tline"><div class="tt"><span style="color:var(${WHO[w].c});font-weight:600">${WHO[w].n}</span><b>${fmt(a[0])}${lib?'+':''} / ${fmt(g[0])}</b></div><span class="meter"><i style="width:${Math.min(100,p*100)}%;background:${lib?'var(--muted)':pctColor(p)}"></i></span><div class="tt"><span>P ${fmt(a[1])} · H ${fmt(a[2])} · G ${fmt(a[3])}</span><span>F ${fmt(a[4])}</span></div></div>`}
+
+function bindCommon(v){
+  v.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const o=REG[+b.dataset.open];openRecipe(o.rid,o)});
+  v.querySelectorAll('[data-cook]').forEach(b=>b.onclick=()=>{const o=REG[+b.dataset.cook];openCook(o.rid,o.items.map(x=>x.who))});
+  v.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>{const k=b.dataset.done;put('done',k,S.done[k]?null:1);rerender()});
+}
+
+/* ---------- SHEET ---------- */
+let lastFocus=null,sheetCtx=null;
+function openRecipe(id,ctx){
+  lastFocus=lastFocus||document.activeElement;sheetCtx={id,ctx};
+  const sc=document.getElementById('scrim');
+  const whos=ctx&&ctx.items?ctx.items.map(x=>x.who):['N','T'].filter(w=>whoList().includes(w)&&D.rec[id]&&D.rec[id][w]);
+  const shown=whos.length?whos:['N','T'].filter(w=>D.rec[id]&&D.rec[id][w]);
+  const t=recType(id);const r=D.rec[id];
+  let meta=`<span class="tag" style="background:var(${MC[t]});color:#fff">${TYPEN[t]}</span>`;
+  if(r&&r.min)meta+=`<span>${r.min} min</span>`;
+  if(ctx&&ctx.d)meta+=`<span>${DIAS[wd(ctx.d)]} ${fdate(ctx.d)}</span>`;
+  if(r&&r.src&&D.src[r.src])meta+=`<span>Inspiración: <a href="${D.src[r.src].u}" target="_blank" rel="noopener">${esc(D.src[r.src].n)}</a></span>`;
+  let actions='';
+  if(id!=='cole'&&id!=='libre')actions+=`<button class="btn primary" id="sh-cook">Modo cocina</button>`;
+  if(ctx&&ctx.d&&id!=='cole')actions+=`<button class="btn" id="sh-swap">Cambiar esta comida</button>`;
+  const swapped=ctx&&ctx.d&&ctx.items.some(x=>S.swaps[iso(ctx.d)+'|'+x.who+'|'+x.pos]);
+  if(swapped)actions+=`<button class="btn" id="sh-undo">Volver a la original</button>`;
+  let body='';
+  if(id==='libre')body=`<div class="panel"><p style="margin:0;max-width:70ch">Una cena normal en casa o fuera, sin pesar ni compensar al día siguiente: un plato principal con proteína, una bebida y, si apetece, un postre. No cuenta en el total del día.</p></div>`;
+  else if(id==='cole'){const m=D.cole.fixed;body=`<div class="pcols"><div class="pcol" style="--pc:var(--teresa)"><h3><i class="dot" style="background:var(--teresa)"></i>Teresa</h3><div class="big"><b>~${fmt(m[0])}</b><span>kcal estimadas</span></div>${mxHTML(m)}<p class="note">Menú equilibrado del comedor escolar. Si un día es muy ligero, sube la cena con 50 g más de proteína.</p>${ctx&&ctx.d?doneBtn(ctx.d,'T',ctx.items[0].pos):''}</div></div>`}
+  else{
+    body=`<div class="pcols">${shown.map(w=>personCol(id,w,ctx)).join('')}</div>`;
+    body+=`<div class="steps"><h3>Cómo se hace</h3><ol>${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>${r.note?`<p class="note" style="margin-top:10px">${esc(r.note)}</p>`:''}</div>`;
+    if(r.salsa){const s=D.salsas.find(x=>x.k===r.salsa);if(s)body+=`<div class="steps"><h3>Salsa: ${esc(s.n)}</h3><p style="margin:0;max-width:75ch">${esc(s.i)}</p></div>`}
+  }
+  body+=`<div id="swaplist"></div>`;
+  sc.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="sh-head"><div class="t"><h2 id="sh-t">${esc(recName(id))}</h2><div class="meta">${meta}</div>${actions?`<div class="sh-actions">${actions}</div>`:''}</div><button class="iconbtn" id="sh-x" aria-label="Cerrar">✕</button></div><div class="sh-body">${body}</div></div>`;
+  sc.hidden=false;document.body.style.overflow='hidden';
+  sc.querySelector('#sh-x').focus();
+  sc.querySelector('#sh-x').onclick=closeSheet;
+  sc.onclick=e=>{if(e.target===sc)closeSheet()};
+  const ck=sc.querySelector('#sh-cook');if(ck)ck.onclick=()=>openCook(id,shown);
+  const swb=sc.querySelector('#sh-swap');if(swb)swb.onclick=()=>showAlts(id,ctx);
+  const un=sc.querySelector('#sh-undo');if(un)un.onclick=()=>{ctx.items.forEach(x=>put('swaps',iso(ctx.d)+'|'+x.who+'|'+x.pos,null));const orig=dayPlan(ctx.d)[ctx.items[0].who][ctx.items[0].pos];rerender();openRecipe(orig,ctx)};
+  sc.querySelectorAll('.donebtn').forEach(b=>b.onclick=()=>{const k=b.dataset.k;put('done',k,S.done[k]?null:1);b.setAttribute('aria-pressed',!!S.done[k]);b.textContent=S.done[k]?'✓ Hecho':'Marcar como hecho';rerender()});
+}
+function closeSheet(){const sc=document.getElementById('scrim');sc.hidden=true;sc.innerHTML='';document.body.style.overflow='';sheetCtx=null;if(lastFocus&&document.contains(lastFocus))lastFocus.focus();lastFocus=null}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!document.getElementById('cook').hidden)closeCook();else if(!document.getElementById('scrim').hidden)closeSheet()}});
+function mxHTML(m){const pk=m[1]*4,ck=m[2]*4,fk=m[3]*9,tot=pk+ck+fk||1;
+  return `<div class="split" aria-hidden="true"><i style="width:${pk/tot*100}%;background:var(--alm)"></i><i style="width:${ck/tot*100}%;background:var(--des)"></i><i style="width:${fk/tot*100}%;background:var(--cen)"></i></div>
+  <div class="mx"><div><span><i class="sw" style="background:var(--alm)"></i>Proteína</span><b>${fmt(m[1])} g</b></div><div><span><i class="sw" style="background:var(--des)"></i>Hidratos</span><b>${fmt(m[2])} g</b></div><div><span><i class="sw" style="background:var(--cen)"></i>Grasa</span><b>${fmt(m[3])} g</b></div><div><span>Fibra</span><b>${fmt(m[4])} g</b></div></div>`}
+function doneBtn(d,w,pos){const k=doneKey(d,w,pos);const dn=!!S.done[k];return `<button class="donebtn" data-k="${k}" aria-pressed="${dn}">${dn?'✓ Hecho':'Marcar como hecho'}</button>`}
+function qtyLabel(f,a){const x=D.foods[f];if(x.g){const n=a===0.5?'½ '+x.un:fmt(a,a%1?1:0)+' '+(a===1?x.un:x.un+'s');return `${n} <span style="color:var(--muted)">(${fmt(grams(f,a))} g)</span>`}return fmt(a)+(x.ml?' ml':' g')}
+function personCol(id,w,ctx){
+  const r=D.rec[id];if(!r[w])return '';const m=recMac(id,w);
+  const rows=r[w].map(([f,a])=>{const x=mac(f,a);return `<tr><td>${esc(D.foods[f].n)}</td><td>${qtyLabel(f,a)}</td><td>${fmt(x[0])}</td><td>${fmt(x[1],1)}</td><td>${fmt(x[2],1)}</td><td>${fmt(x[3],1)}</td></tr>`}).join('');
+  const it=ctx&&ctx.items?ctx.items.find(x=>x.who===w):null;
+  return `<div class="pcol" style="--pc:var(${WHO[w].c})"><h3><i class="dot" style="background:var(${WHO[w].c})"></i>${WHO[w].n}</h3>
+  <div class="big"><b>${fmt(m[0])}</b><span>kcal</span>${ctx&&ctx.d?`<span>· ${fmt(m[0]/target(ctx.d,w)[0]*100)}% del día</span>`:''}</div>${mxHTML(m)}
+  <div class="tbl"><table><thead><tr><th>Ingrediente</th><th>Cantidad</th><th>kcal</th><th>P</th><th>H</th><th>G</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Total</td><td></td><td>${fmt(m[0])}</td><td>${fmt(m[1],1)}</td><td>${fmt(m[2],1)}</td><td>${fmt(m[3],1)}</td></tr></tfoot></table></div>
+  ${it?doneBtn(ctx.d,w,it.pos):''}</div>`;
+}
+function showAlts(id,ctx){
+  const t=recType(id);const pool=t==='alm'||t==='cen'?['alm','cen']:[t];const whos=ctx.items.map(x=>x.who);
+  const cur=whos.map(w=>(recMac(id,w)||[0])[0]);
+  const list=Object.values(D.rec).filter(r=>pool.includes(r.t)&&r.id!==id&&r.id!=='fruta'&&whos.every(w=>r[w])).map(r=>{const k=whos.map(w=>recMac(r.id,w)[0]);return {r,k,diff:k.reduce((s,v,i)=>s+Math.abs(v-cur[i]),0)}}).sort((a,b)=>a.diff-b.diff);
+  const box=document.getElementById('swaplist');
+  box.innerHTML=`<div class="panel"><h3>Cambiar por… <span class="note" style="font-weight:400">(ordenadas por calorías más parecidas)</span></h3><div class="alts">${list.map(x=>`<button class="alt" style="--c:var(${MC[x.r.t]})" data-alt="${x.r.id}"><span class="bar4"></span><span><b>${esc(x.r.n)}</b><br><span class="note">${TYPEN[x.r.t]} · ${x.r.min} min</span></span><span class="d">${whos.map((w,i)=>`<span style="color:var(${WHO[w].c})">${WHO[w].n[0]}</span> ${fmt(x.k[i])} (${x.k[i]-cur[i]>=0?'+':''}${fmt(x.k[i]-cur[i])})`).join('<br>')}</span></button>`).join('')}</div></div>`;
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+  box.querySelectorAll('[data-alt]').forEach(b=>b.onclick=()=>{const nid=b.dataset.alt;ctx.items.forEach(x=>{const orig=dayPlan(ctx.d)[x.who][x.pos];put('swaps',iso(ctx.d)+'|'+x.who+'|'+x.pos,nid===orig?null:nid)});rerender();openRecipe(nid,ctx)});
+}
+
+/* ---------- COCINA ---------- */
+let cookTimers=[],wake=null;
+function openCook(id,whos){
+  const r=D.rec[id];if(!r)return;whos=whos.filter(w=>r[w]);
+  const el=document.getElementById('cook');let step=0;
+  const foods=[];const qty={};whos.forEach(w=>r[w].forEach(([f,a])=>{if(!qty[f]){qty[f]={};foods.push(f)}qty[f][w]=a}));
+  const lab=(f,a)=>a==null?'—':qtyLabel(f,a).replace(/<span[^>]*>\((.*?)\)<\/span>/,'($1)');
+  const tot=f=>{const x=D.foods[f];const s=whos.reduce((t,w)=>t+(qty[f][w]||0),0);return x.g?`${fmt(s,s%1?1:0)} ${s===1?x.un:x.un+'s'} · ${fmt(grams(f,s))} g`:`${fmt(s)}${x.ml?' ml':' g'}`};
+  function draw(){
+    const s=r.steps[step];const mm=s.match(/(\d+)\s*(?:–|-)\s*(\d+)\s*min|(\d+)\s*min/);const mins=mm?(+(mm[2]||mm[3])):0;
+    el.innerHTML=`<div class="wrap"><div class="cook-top"><h2>${esc(r.n)}</h2><button class="iconbtn" id="ck-x" aria-label="Salir del modo cocina">✕</button></div>
+    <div class="panel tbl"><h3>Pesa esto</h3><table class="weigh"><thead><tr><th>Ingrediente</th>${whos.length>1?'<th>Total</th>':''}${whos.map(w=>`<th style="color:var(${WHO[w].c})">${WHO[w].n}</th>`).join('')}</tr></thead><tbody>${foods.map(f=>`<tr><td>${esc(D.foods[f].n)}</td>${whos.length>1?`<td class="tot">${tot(f)}</td>`:''}${whos.map(w=>`<td>${lab(f,qty[f][w])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="stepbox"><span class="sn">Paso ${step+1} de ${r.steps.length}</span><div class="dots">${r.steps.map((_,i)=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div><p>${esc(s)}</p>
+    <div class="stepnav"><button class="btn" id="ck-prev" ${step?'':'disabled'}>Anterior</button><button class="btn primary" id="ck-next">${step<r.steps.length-1?'Siguiente':'Terminar'}</button>${mins?`<button class="timer" id="ck-t" data-m="${mins}">⏱ ${mins} min</button>`:''}</div></div>
+    ${r.salsa&&D.salsas.find(x=>x.k===r.salsa)?`<div class="panel"><h3>Salsa</h3><p style="margin:0">${esc(D.salsas.find(x=>x.k===r.salsa).i)}</p></div>`:''}</div>`;
+    el.querySelector('#ck-x').onclick=closeCook;
+    el.querySelector('#ck-prev').onclick=()=>{step=Math.max(0,step-1);draw()};
+    el.querySelector('#ck-next').onclick=()=>{if(step<r.steps.length-1){step++;draw()}else closeCook()};
+    const tb=el.querySelector('#ck-t');if(tb)tb.onclick=()=>startTimer(tb,+tb.dataset.m);
+  }
+  el.hidden=false;document.body.style.overflow='hidden';draw();
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>wake=w).catch(()=>{})}catch(e){}
+}
+function startTimer(btn,mins){
+  let left=mins*60;btn.classList.add('run');const ctx=(()=>{try{return new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}})();
+  const id=setInterval(()=>{left--;if(!document.contains(btn)){clearInterval(id);return}
+    btn.textContent=`⏱ ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;
+    if(left<=0){clearInterval(id);btn.classList.remove('run');btn.classList.add('end');btn.textContent='¡Listo!';
+      try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
+      if(ctx){[0,.35,.7].forEach(t=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=880;o.connect(g);g.connect(ctx.destination);g.gain.value=.15;o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+.2)})}}},1000);
+  cookTimers.push(id);
+}
+function closeCook(){const el=document.getElementById('cook');el.hidden=true;el.innerHTML='';cookTimers.forEach(clearInterval);cookTimers=[];if(document.getElementById('scrim').hidden)document.body.style.overflow='';try{wake&&wake.release()}catch(e){}wake=null}
+
+/* ---------- RECETAS ---------- */
+function renderRecetas(){
+  const v=document.getElementById('v-recetas');
+  const all=Object.values(D.rec).filter(r=>r.id!=='fruta');
+  const ws=whoList();
+  let h=`<div class="bar"><h2>Recetario</h2><span class="note">${all.length} recetas, todas en 40 min o menos</span></div>
+  <div class="filters"><input class="search" id="rq" type="search" placeholder="Buscar: pollo, salmón, airfryer…" value="${esc(S.q)}" aria-label="Buscar receta">
+  ${[['all','Todas','--ink'],['des','Desayunos','--des'],['alm','Almuerzos','--alm'],['cen','Cenas','--cen'],['mer','Meriendas','--mer'],['pos','Postres','--pos'],['salsas','Salsas','--accent']].map(([k,n,c])=>`<button class="fchip" style="--c:var(${c})" data-ft="${k}" aria-pressed="${S.ft===k}">${n}</button>`).join('')}</div><div id="rlist"></div>`;
+  v.innerHTML=h;
+  const draw=()=>{
+    const q=S.q.trim().toLowerCase();const box=v.querySelector('#rlist');
+    if(S.ft==='salsas'){box.innerHTML=`<div class="panel tbl"><table><thead><tr><th>Salsa</th><th style="text-align:left">Ingredientes (~4 raciones de 50 g)</th><th style="text-align:left">Va con</th></tr></thead><tbody>${D.salsas.map(s=>`<tr><td><b>${esc(s.n)}</b></td><td style="font-family:var(--f-body);text-align:left;white-space:normal">${esc(s.i)}</td><td style="font-family:var(--f-body);text-align:left;white-space:normal">${esc(s.c)}</td></tr>`).join('')}</tbody></table><p class="note">40–60 kcal por cada 50 g. Duran 4 días en la nevera.</p></div>`;return}
+    let out='';['des','alm','cen','mer','pos'].filter(g=>S.ft==='all'||S.ft===g).forEach(g=>{
+      const list=all.filter(r=>r.t===g&&ws.some(w=>r[w])&&(!q||r.n.toLowerCase().includes(q)||ws.some(w=>(r[w]||[]).some(([f])=>D.foods[f].n.toLowerCase().includes(q)))));
+      if(!list.length)return;
+      out+=`<div class="group" style="display:grid;gap:10px"><h3 style="font-size:1.1rem;display:flex;align-items:center;gap:8px"><i class="sw" style="background:var(${MC[g]})"></i>${TYPEP[g]} <span class="note">${list.length}</span></h3><div class="rgrid">${list.map(r=>{
+        const ms=ws.filter(w=>r[w]).map(w=>{const m=recMac(r.id,w);return `<span class="chip" style="background:var(--sunk)"><i class="k" style="background:var(${WHO[w].c})"></i>${fmt(m[0])} kcal · ${fmt(m[1])} P</span>`}).join('');
+        return `<button class="rcard" style="--c:var(${MC[g]})" data-r="${r.id}"><b>${esc(r.n)}</b><span class="rm"><span>${r.min?r.min+' min':'—'}</span>${r.tags.includes('bd')?'<span class="hz">Nueva</span>':''}${!r.N?'<span class="hz">Solo Teresa</span>':''}</span><span class="chips">${ms}</span></button>`}).join('')}</div></div>`});
+    box.innerHTML=out||'<p class="note">Ninguna receta coincide con la búsqueda.</p>';
+    box.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>openRecipe(b.dataset.r,null));
+  };
+  v.querySelector('#rq').oninput=e=>{S.q=e.target.value;draw()};
+  v.querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>{S.ft=b.dataset.ft;v.querySelectorAll('[data-ft]').forEach(x=>x.setAttribute('aria-pressed',x===b));draw()});
+  draw();
+}
+
+/* ---------- COMPRA ---------- */
+const SECORDER=['Fruta y verdura','Carne','Marisco y pescado','Charcutería y quesos','Huevos, leche y mantequilla','Postres y yogures','Panadería y pastelería','Congelados','Arroz, legumbres y pasta','Conservas, caldos y cremas','Cereales y galletas','Aperitivos','Aceite, especias y salsas','Azúcar, caramelos y chocolate','Cacao, café e infusiones','Fuera de Mercadona'];
+const SECC={'Fruta y verdura':'--mer','Carne':'--alm','Marisco y pescado':'--cen','Charcutería y quesos':'--teresa','Huevos, leche y mantequilla':'--des','Postres y yogures':'--nacho','Panadería y pastelería':'--pos','Congelados':'--cen','Arroz, legumbres y pasta':'--des','Conservas, caldos y cremas':'--nacho','Cereales y galletas':'--pos','Aperitivos':'--alm','Aceite, especias y salsas':'--mer','Azúcar, caramelos y chocolate':'--pos','Cacao, café e infusiones':'--pos','Fuera de Mercadona':'--muted'};
+const ICON={leaf:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/>',meat:'<path d="M14 4a6 6 0 0 1 4 10l-5 5a4 4 0 0 1-6-1 4 4 0 0 1-1-6l5-5a6 6 0 0 1 3-3z"/>',fish:'<path d="M3 12c3-5 9-6 14-2l4-3v10l-4-3c-5 4-11 3-14-2z"/>',cheese:'<path d="M3 17V10l11-6 7 6v7z"/><path d="M3 10h18"/>',egg:'<path d="M12 3c4 0 7 7 7 11a7 7 0 0 1-14 0c0-4 3-11 7-11z"/>',cup:'<path d="M5 7h14l-2 13H7z"/><path d="M5 7l1-3h12l1 3"/>',bread:'<path d="M6 20V11a4 4 0 0 1 0-7h12a4 4 0 0 1 0 7v9z"/>',snow:'<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',grain:'<path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M8 9c0-3 2-5 4-5s4 2 4 5"/>',can:'<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3 2.5 7 2.5s7-1.1 7-2.5V6"/>',bottle:'<path d="M10 3h4v4l2 3v11H8V10l2-3z"/><path d="M8 14h8"/>',sweet:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 12h16M12 5v14"/>',bag:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>'};
+const SECI={'Fruta y verdura':'leaf','Carne':'meat','Marisco y pescado':'fish','Charcutería y quesos':'cheese','Huevos, leche y mantequilla':'egg','Postres y yogures':'cup','Panadería y pastelería':'bread','Congelados':'snow','Arroz, legumbres y pasta':'grain','Conservas, caldos y cremas':'can','Cereales y galletas':'grain','Aperitivos':'sweet','Aceite, especias y salsas':'bottle','Azúcar, caramelos y chocolate':'sweet','Cacao, café e infusiones':'sweet','Fuera de Mercadona':'bag'};
+function icon(k){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||ICON.bag}</svg>`}
+function initials(n){const w=n.replace(/^\d+\s/,'').split(/\s+/).filter(x=>x.length>2&&!/^(de|del|con|sin|para)$/i.test(x));return (w[0]||n)[0].toUpperCase()+((w[1]||'')[0]||'').toLowerCase()}
+function computeShop(){
+  const from=S.cfg.from?parse(S.cfg.from):(today()<START?START:today());const days=S.cfg.days||10;
+  const need={},uses={},pantryUsed=new Set();
+  const addNeed=(f,q,rn)=>{need[f]=(need[f]||0)+q;(uses[f]=uses[f]||new Set()).add(rn)};
+  for(let i=0;i<days;i++){const d=addDays(from,i);whoList().forEach(w=>mealsFor(d,w).forEach(m=>{
+    const r=D.rec[m.rid];if(!r||!r[w])return;r[w].forEach(([f,a])=>{
+      if(D.split[f]){const g=grams(f,a);Object.entries(D.split[f]).forEach(([k,fr])=>{if(k[0]==='P')pantryUsed.add(k);else addNeed(k,g*fr,r.n)})}
+      else addNeed(f,D.unitf.includes(f)?a:grams(f,a),r.n)})}))}
+  const rows={};
+  Object.entries(need).forEach(([f,q])=>{const opts=D.fmap[f];if(!opts)return;
+    if(opts[0][0]==='P'||opts[0][0]==='X'){pantryUsed.add(opts[0]);(rows[opts[0]]=rows[opts[0]]||{q:1,u:new Set()});uses[f].forEach(u=>rows[opts[0]].u.add(u));return}
+    const P=opts.map(id=>D.prods[id]);
+    // greedy combo vs all-largest
+    let rem=q,combo=[];P.forEach((p,i)=>{if(i<P.length-1){const n=Math.floor(rem/p.sz);if(n){combo.push([p,n]);rem-=n*p.sz}}else{const n=Math.ceil(Math.max(0,rem-1e-6)/p.sz);if(n)combo.push([p,n])}});
+    const big=[[P[0],Math.ceil(q/P[0].sz)]];const cost=c=>c.reduce((s,[p,n])=>s+p.p*n,0);
+    (cost(big)<=cost(combo)?big:combo).forEach(([p,n])=>{const r=rows[p.id]=rows[p.id]||{q:0,u:new Set()};r.q+=n;uses[f].forEach(u=>r.u.add(u))})});
+  Object.keys(D.prods).filter(id=>D.prods[id].pantry).forEach(id=>{if(!rows[id])rows[id]={q:1,u:new Set()}});
+  return {from,days,rows};
+}
+function renderCompra(){
+  const v=document.getElementById('v-compra');
+  const {from,days,rows}=computeShop();const to=addDays(from,days-1);
+  const ids=Object.keys(rows);let tf=0,tp=0,got=0,act=0;
+  ids.forEach(id=>{const p=D.prods[id];if(S.have[id])return;act++;if(S.got[id])got++;const c=p.p*rows[id].q;if(p.pantry)tp+=c;else tf+=c});
+  const fromV=S.cfg.from||iso(from);
+  let h=`<div class="bar"><h2>Lista de la compra</h2><span class="spacer"></span><label class="pill" style="display:inline-flex;gap:8px;align-items:center"><input type="checkbox" id="hidegot" ${S.hideGot?'checked':''}> Ocultar comprado y en casa</label><span id="resetbox"><button class="btn" id="reset">Nueva compra</button></span></div>
+  <div class="cfg"><label for="c-days">Para cuántos días<select id="c-days">${[3,5,7,10,14].map(n=>`<option value="${n}" ${n===days?'selected':''}>${n} días</option>`).join('')}</select></label>
+  <label for="c-from">Desde<input type="date" id="c-from" value="${fromV}"></label>
+  <span class="note" style="flex:1;min-width:200px">Para <b>${S.who==='both'?'los dos':WHO[S.who].n}</b> (cámbialo arriba). Tiene en cuenta las comidas que hayáis cambiado y la rotación de semanas.</span></div>
+  <div class="shopsum">
+   <div class="stat"><span class="lab">Cubre</span><b>${days} días</b><small>${DIAS[wd(from)].toLowerCase()} ${fdate(from)} – ${DIAS[wd(to)].toLowerCase()} ${fdate(to)}</small></div>
+   <div class="stat"><span class="lab">Compra</span><b>${eur(tf)}</b><small>Fresco, congelado y proteína</small></div>
+   <div class="stat"><span class="lab">Despensa</span><b>${eur(tp)}</b><small>Lo que no marquéis «en casa»</small></div>
+   <div class="stat"><span class="lab">En el carro</span><b>${got} / ${act}</b><small>productos</small></div></div>
+  <p class="note">Nombres tal cual aparecen en Mercadona, ordenados por sus secciones; la foto está en la «Ficha». Precios del catálogo online (8 nov 2026, almacén de Sevilla). Marca <b>En casa</b> lo que ya tengáis y desaparece del total.</p>`;
+  SECORDER.forEach(sec=>{
+    const items=ids.filter(id=>D.prods[id].s===sec).sort((a,b)=>(D.prods[a].pantry?1:0)-(D.prods[b].pantry?1:0)||D.prods[a].n.localeCompare(D.prods[b].n));
+    if(!items.length)return;const c=SECC[sec];const sub=items.reduce((t,id)=>t+(S.have[id]?0:D.prods[id].p*rows[id].q),0);
+    h+=`<div class="sec${S.hideGot?' hidegot':''}" style="--sc:var(${c})"><header><span class="ico">${icon(SECI[sec])}</span><h3>${esc(sec)}</h3><span class="cnt">${items.length} · ${sub?eur(sub):'—'}</span></header>`;
+    items.forEach(id=>{const p=D.prods[id],r=rows[id];const g=!!S.got[id],hv=!!S.have[id];
+      h+=`<div class="item${g?' got':''}${hv?' have':''}"><input type="checkbox" id="g-${id}" data-k="${id}" ${g?'checked':''} aria-label="Comprado: ${esc(p.n)}">
+      <span class="thumb" aria-hidden="true">${initials(p.n)}</span>
+      <div class="iname"><label for="g-${id}"><b>${esc(p.n)}</b></label><span class="fmt">${esc(p.f)}${p.p?` · ${eur(p.p)}/ud`:''} ${p.pantry?'<span class="hz">Despensa</span>':''}</span>${r.u.size?`<span class="uses">${[...r.u].slice(0,4).map(u=>`<span>${esc(u)}</span>`).join('')}${r.u.size>4?`<span>+${r.u.size-4}</span>`:''}</span>`:''}</div>
+      <div class="iprice"><span class="qty">×${r.q}</span>${p.p?`<span class="pp">${eur(p.p*r.q)}</span>`:''}<span class="lnk"><button class="havebtn" data-have="${id}" aria-pressed="${hv}">En casa</button>${p.url?`<a href="${p.url}" target="_blank" rel="noopener">Ficha ↗</a>`:''}</span></div></div>`});
+    h+=`</div>`;
+  });
+  v.innerHTML=h;
+  v.querySelector('#c-days').onchange=e=>{S.cfg.days=+e.target.value;store.set('pnt-cfg',S.cfg);renderCompra()};
+  v.querySelector('#c-from').onchange=e=>{S.cfg.from=e.target.value||null;store.set('pnt-cfg',S.cfg);renderCompra()};
+  v.querySelectorAll('.item input').forEach(cb=>cb.onchange=()=>{put('got',cb.dataset.k,cb.checked?1:null);renderCompra()});
+  v.querySelectorAll('[data-have]').forEach(b=>b.onclick=()=>{const k=b.dataset.have;put('have',k,S.have[k]?null:1);renderCompra()});
+  v.querySelector('#hidegot').onchange=e=>{S.hideGot=e.target.checked;store.set('pnt-hide',S.hideGot);v.querySelectorAll('.sec').forEach(s=>s.classList.toggle('hidegot',S.hideGot))};
+  v.querySelector('#reset').onclick=()=>{const box=v.querySelector('#resetbox');box.innerHTML=`<span style="display:inline-flex;gap:6px;align-items:center;font-size:.85rem">¿Desmarcar lo comprado? <button class="btn danger" id="rs-y">Sí</button><button class="btn" id="rs-n">No</button></span>`;
+    box.querySelector('#rs-y').onclick=()=>{clearField('got');renderCompra()};box.querySelector('#rs-n').onclick=()=>renderCompra()};
+}
+
+/* ---------- ROUTER ---------- */
+const VIEWS={hoy:renderHoy,plan:renderPlan,compra:renderCompra,recetas:renderRecetas};
+function rerender(){const st=window.scrollY;VIEWS[S.view]();window.scrollTo(0,st)}
+function route(){let t=(location.hash||'#hoy').slice(1);if(!VIEWS[t])t='hoy';S.view=t;
+  document.querySelectorAll('nav.tabs a').forEach(a=>a.setAttribute('aria-current',a.dataset.tab===t?'page':'false'));
+  Object.keys(VIEWS).forEach(k=>document.getElementById('v-'+k).hidden=k!==t);VIEWS[t]()}
+document.querySelectorAll('.top .seg button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.who===S.who);b.onclick=()=>{S.who=b.dataset.who;store.set('pnt-who',S.who);document.querySelectorAll('.top .seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));rerender()}});
+window.addEventListener('hashchange',route);
+goToday();route();initSync();
+</script>
+
+</body></html>

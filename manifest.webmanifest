@@ -1,0 +1,31 @@
+{
+ "name": "Plan Nacho y Teresa",
+ "short_name": "Comida",
+ "start_url": "./#hoy",
+ "display": "standalone",
+ "background_color": "#F3F5EF",
+ "theme_color": "#0A7448",
+ "lang": "es",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ],
+ "shortcuts": [
+  {
+   "name": "Lista de la compra",
+   "url": "./#compra"
+  },
+  {
+   "name": "Plan semanal",
+   "url": "./#hoy"
+  }
+ ]
+}
